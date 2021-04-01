@@ -42,8 +42,6 @@ COPY Vendor/fog/mobilecoin/consensus/api/proto/consensus_client.proto \
 COPY Vendor/fog/mobilecoin/fog/api/proto/report.proto \
     Vendor/fog/mobilecoin/fog/api/proto/
 COPY Vendor/fog/fog/api/proto/fog_common.proto \
-    Vendor/fog/fog/api/proto/ingest.proto \
-    Vendor/fog/fog/api/proto/ingest_common.proto \
     Vendor/fog/fog/api/proto/kex_rng.proto \
     Vendor/fog/fog/api/proto/ledger.proto \
     Vendor/fog/fog/api/proto/view.proto \
@@ -69,8 +67,6 @@ RUN protoc \
     consensus_common.proto \
     report.proto \
     fog_common.proto \
-    ingest.proto \
-    ingest_common.proto \
     kex_rng.proto \
     ledger.proto \
     view.proto
