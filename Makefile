@@ -9,7 +9,7 @@ default: setup build generate
 
 .PHONY: setup
 setup:
-	cd "$(FOG_DIR)" && rustup target add $(IOS_TARGETS)
+	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE) setup
 	bundle install
 
 # Unexport conditional environment variables so the build is more predictable
