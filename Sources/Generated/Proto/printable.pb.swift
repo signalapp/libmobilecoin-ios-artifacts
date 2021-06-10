@@ -273,30 +273,42 @@ extension Printable_PrintableWrapper: SwiftProtobuf.Message, SwiftProtobuf._Mess
       switch fieldNumber {
       case 1: try {
         var v: External_PublicAddress?
+        var hadOneofValue = false
         if let current = self.wrapper {
-          try decoder.handleConflictingOneOf()
+          hadOneofValue = true
           if case .publicAddress(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {self.wrapper = .publicAddress(v)}
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.wrapper = .publicAddress(v)
+        }
       }()
       case 2: try {
         var v: Printable_PaymentRequest?
+        var hadOneofValue = false
         if let current = self.wrapper {
-          try decoder.handleConflictingOneOf()
+          hadOneofValue = true
           if case .paymentRequest(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {self.wrapper = .paymentRequest(v)}
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.wrapper = .paymentRequest(v)
+        }
       }()
       case 3: try {
         var v: Printable_TransferPayload?
+        var hadOneofValue = false
         if let current = self.wrapper {
-          try decoder.handleConflictingOneOf()
+          hadOneofValue = true
           if case .transferPayload(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {self.wrapper = .transferPayload(v)}
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.wrapper = .transferPayload(v)
+        }
       }()
       default: break
       }
