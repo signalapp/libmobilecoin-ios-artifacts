@@ -85,9 +85,10 @@ GEM
 
 PLATFORMS
   ruby
+  universal-darwin-20
 
 DEPENDENCIES
   cocoapods!
 
 BUNDLED WITH
-   2.1.4
+   2.2.2
