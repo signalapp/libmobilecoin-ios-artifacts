@@ -35,6 +35,18 @@ Pod::Spec.new do |s|
   s.dependency "SwiftProtobuf", "~> 1.5"
 
 
+  # ――― Subspecs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
+
+  s.default_subspecs = :none
+
+  s.subspec "TestVectors" do |subspec|
+    subspec.source_files = "Sources/TestVector/**/*.swift"
+    subspec.resources = [
+      "Vendor/fog/mobilecoin/test-vectors/vectors/**/*.*",
+    ]
+  end
+
+
   # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.swift_version = "5.2"
