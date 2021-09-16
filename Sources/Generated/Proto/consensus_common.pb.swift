@@ -58,6 +58,7 @@ public enum ConsensusCommon_ProposeTxResult: SwiftProtobuf.Enum {
   case txFeeError // = 37
   case keyError // = 38
   case unsortedInputs // = 39
+  case missingMemo // = 40
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -97,6 +98,7 @@ public enum ConsensusCommon_ProposeTxResult: SwiftProtobuf.Enum {
     case 37: self = .txFeeError
     case 38: self = .keyError
     case 39: self = .unsortedInputs
+    case 40: self = .missingMemo
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -134,6 +136,7 @@ public enum ConsensusCommon_ProposeTxResult: SwiftProtobuf.Enum {
     case .txFeeError: return 37
     case .keyError: return 38
     case .unsortedInputs: return 39
+    case .missingMemo: return 40
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -176,6 +179,7 @@ extension ConsensusCommon_ProposeTxResult: CaseIterable {
     .txFeeError,
     .keyError,
     .unsortedInputs,
+    .missingMemo,
   ]
 }
 
@@ -282,6 +286,7 @@ extension ConsensusCommon_ProposeTxResult: SwiftProtobuf._ProtoNameProviding {
     37: .same(proto: "TxFeeError"),
     38: .same(proto: "KeyError"),
     39: .same(proto: "UnsortedInputs"),
+    40: .same(proto: "MissingMemo"),
   ]
 }
 

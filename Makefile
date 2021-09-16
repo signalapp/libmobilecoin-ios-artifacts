@@ -1,7 +1,9 @@
-FOG_DIR = Vendor/fog
-LIBMOBILECOIN_LIB_DIR = $(FOG_DIR)/libmobilecoin
+MOBILECOIN_DIR = Vendor/mobilecoin
+LIBMOBILECOIN_LIB_DIR = $(MOBILECOIN_DIR)/libmobilecoin
 LIBMOBILECOIN_ARTIFACTS_DIR = $(LIBMOBILECOIN_LIB_DIR)/out/ios
+LIBMOBILECOIN_ARTIFACTS_HEADERS = $(LIBMOBILECOIN_LIB_DIR)/out/ios/include
 ARTIFACTS_DIR = Artifacts
+IOS_TARGETS = x86_64-apple-ios aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-ios-macabi x86_64-apple-ios-macabi
 
 .PHONY: default
 default: setup build generate
@@ -23,7 +25,12 @@ build:
 	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE) ios
 	rm -r "$(ARTIFACTS_DIR)" 2>/dev/null || true
 	mkdir -p "$(ARTIFACTS_DIR)"
-	cp -R "$(LIBMOBILECOIN_ARTIFACTS_DIR)/" "$(ARTIFACTS_DIR)"
+
+	# Create arch specific folders for each lib
+	$(foreach arch,$(IOS_TARGETS),mkdir -p $(ARTIFACTS_DIR)/target/$(arch)/release;) 
+	$(foreach arch,$(IOS_TARGETS),cp $(LIBMOBILECOIN_ARTIFACTS_DIR)/target/$(arch)/release/libmobilecoin_stripped.a $(ARTIFACTS_DIR)/target/$(arch)/release;)
+	cp -R "$(LIBMOBILECOIN_ARTIFACTS_HEADERS)" "$(ARTIFACTS_DIR)"
+
 
 .PHONY: generate
 generate:

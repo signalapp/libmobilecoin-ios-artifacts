@@ -359,8 +359,10 @@ public struct FogLedger_KeyImageResult {
   public var spentAt: UInt64 = 0
 
   //// The timestamp of the block containing this key image.
-  //// The value is u64::MAX if the timestamp cannot be found. Callers must check the
-  //// timestamp_result_code to determine why the timestamp could not be found.
+  //// The value is u64::MAX if the timestamp cannot be found.
+  //// If the timestamp cannot be found, even when key_image_result_code == Spent,
+  //// that represents an internal error of the server
+  //// which should be reported to the developers.
   //// Note: The timestamps are based on untrusted reporting of time from the consensus validators.
   //// Represented as seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.
   public var timestamp: UInt64 = 0
@@ -370,6 +372,9 @@ public struct FogLedger_KeyImageResult {
   //// This is fixed32 to avoid leaking information about found / not found in the size of the encrypted
   //// payload.
   //// The possible values are described in enum TimestampResultCode.
+  //// This is a legacy result code which was forwarded by ledger server from the Watcher db API if a timestamp is not available.
+  //// The ledger server now handles all of these errors and the result will always be `TimestampFound`.
+  //// Clients should ignore this value, and in a future revision we may make it always zero.
   public var timestampResultCode: UInt32 = 0
 
   //// The result code indicating whether the key image was spent.
@@ -402,7 +407,7 @@ public struct FogLedger_BlockResponse {
   // methods supported on all messages.
 
   //// The block data returned by the server
-  public var blocks: [FogLedger_Block] = []
+  public var blocks: [FogLedger_BlockData] = []
 
   //// The total number of blocks in the ledger at the time the request is evaluated
   public var numBlocks: UInt64 = 0
@@ -415,7 +420,7 @@ public struct FogLedger_BlockResponse {
   public init() {}
 }
 
-public struct FogLedger_Block {
+public struct FogLedger_BlockData {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -924,8 +929,8 @@ extension FogLedger_BlockResponse: SwiftProtobuf.Message, SwiftProtobuf._Message
   }
 }
 
-extension FogLedger_Block: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".Block"
+extension FogLedger_BlockData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".BlockData"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "index"),
     2: .standard(proto: "global_txo_count"),
@@ -969,7 +974,7 @@ extension FogLedger_Block: SwiftProtobuf.Message, SwiftProtobuf._MessageImplemen
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: FogLedger_Block, rhs: FogLedger_Block) -> Bool {
+  public static func ==(lhs: FogLedger_BlockData, rhs: FogLedger_BlockData) -> Bool {
     if lhs.index != rhs.index {return false}
     if lhs.globalTxoCount != rhs.globalTxoCount {return false}
     if lhs.outputs != rhs.outputs {return false}
