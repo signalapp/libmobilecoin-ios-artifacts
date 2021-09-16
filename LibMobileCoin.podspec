@@ -43,7 +43,7 @@ Pod::Spec.new do |s|
   s.subspec "TestVectors" do |subspec|
     subspec.source_files = "Sources/TestVector/**/*.swift"
     subspec.resources = [
-      "Vendor/fog/mobilecoin/test-vectors/vectors/**/*.*",
+      "Vendor/mobilecoin/test-vectors/vectors/**/*.*",
     ]
   end
 
