@@ -409,7 +409,21 @@ public struct External_Amount {
   fileprivate var _commitment: External_CompressedRistretto? = nil
 }
 
+/// The bytes of encrypted fog hint
 public struct External_EncryptedFogHint {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var data: Data = Data()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// The bytes of encrypted memo
+public struct External_EncryptedMemo {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -469,6 +483,16 @@ public struct External_TxOut {
   /// Clears the value of `eFogHint`. Subsequent reads from it will return its default value.
   public mutating func clearEFogHint() {self._eFogHint = nil}
 
+  /// Encrypted memo
+  public var eMemo: External_EncryptedMemo {
+    get {return _eMemo ?? External_EncryptedMemo()}
+    set {_eMemo = newValue}
+  }
+  /// Returns true if `eMemo` has been explicitly set.
+  public var hasEMemo: Bool {return self._eMemo != nil}
+  /// Clears the value of `eMemo`. Subsequent reads from it will return its default value.
+  public mutating func clearEMemo() {self._eMemo = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -477,6 +501,7 @@ public struct External_TxOut {
   fileprivate var _targetKey: External_CompressedRistretto? = nil
   fileprivate var _publicKey: External_CompressedRistretto? = nil
   fileprivate var _eFogHint: External_EncryptedFogHint? = nil
+  fileprivate var _eMemo: External_EncryptedMemo? = nil
 }
 
 public struct External_TxIn {
@@ -1394,6 +1419,38 @@ extension External_EncryptedFogHint: SwiftProtobuf.Message, SwiftProtobuf._Messa
   }
 }
 
+extension External_EncryptedMemo: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EncryptedMemo"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "data"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.data) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.data.isEmpty {
+      try visitor.visitSingularBytesField(value: self.data, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_EncryptedMemo, rhs: External_EncryptedMemo) -> Bool {
+    if lhs.data != rhs.data {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension External_TxOut: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TxOut"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -1401,6 +1458,7 @@ extension External_TxOut: SwiftProtobuf.Message, SwiftProtobuf._MessageImplement
     2: .standard(proto: "target_key"),
     3: .standard(proto: "public_key"),
     4: .standard(proto: "e_fog_hint"),
+    5: .standard(proto: "e_memo"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1413,6 +1471,7 @@ extension External_TxOut: SwiftProtobuf.Message, SwiftProtobuf._MessageImplement
       case 2: try { try decoder.decodeSingularMessageField(value: &self._targetKey) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._publicKey) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._eFogHint) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._eMemo) }()
       default: break
       }
     }
@@ -1431,6 +1490,9 @@ extension External_TxOut: SwiftProtobuf.Message, SwiftProtobuf._MessageImplement
     if let v = self._eFogHint {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     }
+    if let v = self._eMemo {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1439,6 +1501,7 @@ extension External_TxOut: SwiftProtobuf.Message, SwiftProtobuf._MessageImplement
     if lhs._targetKey != rhs._targetKey {return false}
     if lhs._publicKey != rhs._publicKey {return false}
     if lhs._eFogHint != rhs._eFogHint {return false}
+    if lhs._eMemo != rhs._eMemo {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
