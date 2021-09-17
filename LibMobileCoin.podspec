@@ -48,7 +48,7 @@ Pod::Spec.new do |s|
     subspec.source_files = "Sources/TestVector/**/*.swift"
     subspec.preserve_paths = [
       'Artifacts/**/libmobilecoin_stripped.a',
-    ],
+    ]
     subspec.resources = [
       "Vendor/mobilecoin/test-vectors/vectors/**/*.*",
     ]
