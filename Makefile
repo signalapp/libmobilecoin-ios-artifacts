@@ -11,7 +11,7 @@ default: setup build generate
 
 .PHONY: setup
 setup:
-	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE) setup
+	cd "$(LIBMOBILECOIN_LIB_DIR)"
 	bundle install
 
 # Unexport conditional environment variables so the build is more predictable
@@ -29,7 +29,7 @@ build:
 
 	# Create arch specific folders for each lib
 	$(foreach arch,$(IOS_TARGETS),mkdir -p $(ARTIFACTS_DIR)/target/$(arch)/release;) 
-	$(foreach arch,$(IOS_TARGETS),cp $(LIBMOBILECOIN_ARTIFACTS_DIR)/target/$(arch)/$(LIBMOBILECOIN_PROFILE)/libmobilecoin_stripped.a $(ARTIFACTS_DIR)/target/$(arch)/release;)
+	$(foreach arch,$(IOS_TARGETS),cp $(LIBMOBILECOIN_ARTIFACTS_DIR)/target/$(arch)/$(LIBMOBILECOIN_PROFILE)/libmobilecoin.a $(ARTIFACTS_DIR)/target/$(arch)/release/libmobilecoin.a;)
 	cp -R "$(LIBMOBILECOIN_ARTIFACTS_HEADERS)" "$(ARTIFACTS_DIR)"
 
 
