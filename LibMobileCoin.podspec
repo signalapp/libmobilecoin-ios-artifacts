@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.name         = "LibMobileCoin"
-  s.version      = "1.2.0-pre1"
+  s.version      = "1.2.0-pre2"
   s.summary      = "A library for communicating with MobileCoin network"
 
   s.author       = "MobileCoin"
@@ -31,7 +31,7 @@ Pod::Spec.new do |s|
   ]
 
   s.preserve_paths = [
-    'Artifacts/**/libmobilecoin_stripped.a',
+    'Artifacts/**/libmobilecoin.a',
   ]
 
   # ――― Dependencies ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
@@ -47,7 +47,7 @@ Pod::Spec.new do |s|
   s.subspec "TestVectors" do |subspec|
     subspec.source_files = "Sources/TestVector/**/*.swift"
     subspec.preserve_paths = [
-      'Artifacts/**/libmobilecoin_stripped.a',
+      'Artifacts/**/libmobilecoin.a',
     ]
     subspec.resources = [
       "Vendor/mobilecoin/test-vectors/vectors/**/*.*",
@@ -60,9 +60,11 @@ Pod::Spec.new do |s|
   s.swift_version = "5.2"
 
   s.pod_target_xcconfig = {
+    "GCC_OPTIMIZATION_LEVEL" => "z",
+    "LLVM_LTO" => "YES",
     # Rust bitcode is not verified to be compatible with Apple Xcode's LLVM bitcode,
     # so this is disabled to be on the safe side.
-    "ENABLE_BITCODE" => "NO",
+    "ENABLE_BITCODE" => "YES",
     # Mac Catalyst is not supported since tjis library includes a vendored binary
     # that only includes support for iOS archictures.
     "SUPPORTS_MACCATALYST" => "YES",
@@ -74,7 +76,7 @@ Pod::Spec.new do |s|
     "HEADER_SEARCH_PATHS": "$(PODS_TARGET_SRCROOT)/Artifacts/include",
     "SWIFT_INCLUDE_PATHS": "$(HEADER_SEARCH_PATHS)",
 
-    "LIBMOBILECOIN_LIB_IF_NEEDED": "$(PODS_TARGET_SRCROOT)/Artifacts/target/$(CARGO_BUILD_TARGET)/release/libmobilecoin_stripped.a",
+    "LIBMOBILECOIN_LIB_IF_NEEDED": "$(PODS_TARGET_SRCROOT)/Artifacts/target/$(CARGO_BUILD_TARGET)/release/libmobilecoin.a",
     "OTHER_LDFLAGS": "-u _mc_string_free $(LIBMOBILECOIN_LIB_IF_NEEDED)",
 
     "CARGO_BUILD_TARGET[sdk=iphonesimulator*][arch=arm64]": "aarch64-apple-ios-sim",
@@ -99,7 +101,9 @@ Pod::Spec.new do |s|
   # `user_target_xcconfig` should only be set when the setting needs to propogate to
   # all targets that depend on this library.
   s.user_target_xcconfig = {
-    "ENABLE_BITCODE" => "NO",
+    "GCC_OPTIMIZATION_LEVEL" => "z",
+    "LLVM_LTO" => "YES",
+    "ENABLE_BITCODE" => "YES",
     "SUPPORTS_MACCATALYST" => "YES",
     "EXCLUDED_ARCHS[sdk=iphoneos*]" => "armv7",
     "EXCLUDED_ARCHS[sdk=iphonesimulator*]" => "i386",
