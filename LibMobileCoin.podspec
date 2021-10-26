@@ -101,9 +101,6 @@ Pod::Spec.new do |s|
   # `user_target_xcconfig` should only be set when the setting needs to propogate to
   # all targets that depend on this library.
   s.user_target_xcconfig = {
-    "GCC_OPTIMIZATION_LEVEL" => "z",
-    "LLVM_LTO" => "YES",
-    "ENABLE_BITCODE" => "YES",
     "SUPPORTS_MACCATALYST" => "YES",
     "EXCLUDED_ARCHS[sdk=iphoneos*]" => "armv7",
     "EXCLUDED_ARCHS[sdk=iphonesimulator*]" => "i386",
