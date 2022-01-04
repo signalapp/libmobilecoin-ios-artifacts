@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.name         = "LibMobileCoin"
-  s.version      = "1.2.0-pre4"
+  s.version      = "1.2.0-pre5"
   s.summary      = "A library for communicating with MobileCoin network"
 
   s.author       = "MobileCoin"
@@ -17,43 +17,51 @@ Pod::Spec.new do |s|
     :submodules => true
   }
 
-
   # ――― Platform Specifics ――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.platform     = :ios, "10.0"
 
-
-  # ――― Sources -――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
-
-  s.source_files = [
-    "Artifacts/include/*.h",
-    "Sources/Generated/Proto/*.{grpc,pb}.swift",
-  ]
-
-  s.preserve_paths = [
-    'Artifacts/**/libmobilecoin.a',
-  ]
-
-  # ――― Dependencies ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
-
-  s.dependency "gRPC-Swift"
-  s.dependency "SwiftProtobuf", "~> 1.5"
-
-
   # ――― Subspecs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.default_subspecs = :none
+  # s.default_subspecs = "Core"
 
-  s.subspec "TestVectors" do |subspec|
-    subspec.source_files = "Sources/TestVector/**/*.swift"
-    subspec.preserve_paths = [
-      'Artifacts/**/libmobilecoin.a',
-    ]
-    subspec.resources = [
-      "Vendor/mobilecoin/test-vectors/vectors/**/*.*",
-    ]
-  end
+   s.subspec "TestVectors" do |subspec|
+     subspec.source_files = "Sources/TestVector/**/*.swift"
+     subspec.preserve_paths = [
+       'Artifacts/**/libmobilecoin.a',
+     ]
+     subspec.resources = [
+       "Vendor/mobilecoin/test-vectors/vectors/**/*.*",
+     ]
+   end
 
+   s.subspec "Core" do |subspec|
+     subspec.preserve_paths = [
+       'Artifacts/**/libmobilecoin.a',
+     ]
+ 
+     subspec.source_files = [
+       "Artifacts/include/*.h",
+       "Sources/Generated/Proto/*.{grpc,pb}.swift",
+     ]
+ 
+     subspec.dependency "gRPC-Swift"
+     subspec.dependency "SwiftProtobuf", "~> 1.5"
+   end
+
+   s.subspec "CoreHTTP" do |subspec|
+     subspec.preserve_paths = [
+       'Artifacts/**/libmobilecoin.a',
+     ]
+ 
+     subspec.source_files = [
+       "Artifacts/include/*.h",
+       "Sources/Generated/Proto/*.pb.swift",
+     ]
+ 
+     subspec.dependency "SwiftProtobuf", "~> 1.5"
+   end
 
   # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
