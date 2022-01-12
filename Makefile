@@ -43,6 +43,9 @@ generate:
 .PHONY: lint
 lint: lint-podspec
 
+.PHONY: lint-locally
+lint-locally: lint-locally-podspec
+
 .PHONY: publish
 publish: tag-release publish-podspec
 
@@ -57,6 +60,10 @@ tag-release:
 		git push git@github.com:mobilecoinofficial/libmobilecoin-ios-artifacts.git "refs/tags/v$$VERSION"
 
 # LibMobileCoin pod
+
+.PHONY: lint-locally-podspec
+lint-locally-podspec:
+	bundle exec pod lib lint LibMobileCoin.podspec --allow-warnings
 
 .PHONY: lint-podspec
 lint-podspec:
