@@ -1,0 +1,158 @@
+version: 2.1
+
+defaults:
+  default-xcode-version: &default-xcode-version "12.2.0"
+  default-ruby-version: &default-ruby-version "2.7"
+
+  default-environment: &default-environment
+    FASTLANE_SKIP_UPDATE_CHECK: "1"
+    devNetworkAuthUsername:
+    devNetworkAuthPassword:
+    testNetTestAccountMnemonicsCommaSeparated:
+
+commands:
+  print-tool-versions:
+    description: Print versions of various tools used
+    steps:
+      - run:
+          name: Print tool versions
+          command: |
+            set -x
+            brew config
+            brew list --versions
+            bundle env
+            bundle exec pod env
+            printenv
+
+  set-ruby-version:
+    description: Set Ruby Version
+    parameters:
+      ruby-version:
+        type: string
+        default: *default-ruby-version
+    steps:
+      - run:
+          name: Use Ruby << parameters.ruby-version >>
+          command: |
+            echo 'source /usr/local/share/chruby/chruby.sh' >> $BASH_ENV
+            echo 'chruby ruby-<< parameters.ruby-version >>' >> $BASH_ENV
+
+  install-gems:
+    description: Install Ruby gems
+    parameters:
+      ruby-version:
+        type: string
+        default: *default-ruby-version
+    steps:
+      - restore_cache:
+          name: Restore Ruby gem cache
+          keys:
+            - v0-ruby-<< parameters.ruby-version >>-gems-{{ checksum "Gemfile.lock" }}
+            - v0-ruby-<< parameters.ruby-version >>-gems-
+      - run:
+          name: Install root bundler dependencies
+          command: |
+            bundle config set --local deployment 'true'
+            bundle config set --local path '.vendor/bundle'
+            bundle config set --local clean 'true'
+            bundle check || bundle install
+      - save_cache:
+          name: Save Ruby gem cache
+          key: v0-ruby-<< parameters.ruby-version >>-gems-{{ checksum "Gemfile.lock" }}
+          paths:
+            - .vendor/bundle
+
+  set-git-credentials:
+    description: Set git credentials
+    steps:
+      - run:
+          name: Set git credentials
+          command: |
+            git config user.email "mobilecoin-ci@mobilecoin.com"
+            git config user.name "mobilecoin-ci"
+
+  lint-locally-podspec:
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "c2:90:32:ec:0e:38:09:a0:b0:d7:20:23:68:bc:8d:6f"
+      - run:
+          name: Lint podspec locally
+          command: make lint-locally
+
+  publish-to-trunk:
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "c2:90:32:ec:0e:38:09:a0:b0:d7:20:23:68:bc:8d:6f"
+      - run:
+          name: Publish Pod to Trunk
+          command: make publish
+
+  check-dirty-git:
+    steps:
+      - run:
+          name: Check dirty git
+          command: |
+            if [[ -n $(git status --porcelain) ]]; then
+              echo "repo is dirty"
+              git status
+              exit 1
+            fi
+
+jobs:
+  init-and-lint:
+    parameters:
+      xcode-version:
+        type: string
+        default: *default-xcode-version
+    macos:
+      xcode: << parameters.xcode-version >>
+    environment:
+      <<: *default-environment
+      FL_BUILDLOG_PATH: ../output/buildlogs
+      SCAN_OUTPUT_DIRECTORY: ../output/scan
+      SCAN_OUTPUT_TYPES: junit
+    steps:
+      - checkout
+      - set-ruby-version
+      - install-gems
+      - print-tool-versions
+      - set-git-credentials
+      - lint-locally-podspec
+      #- run: make build # TODO
+      #- run: make test # TODO
+      - store_artifacts: { path: output }
+      - store_test_results: { path: output/scan }
+      - store_artifacts: { path: ~/Library/Logs/DiagnosticReports }
+      - check-dirty-git
+
+  publish-pod-release:
+    parameters:
+      xcode-version:
+        type: string
+        default: *default-xcode-version
+    macos:
+      xcode: << parameters.xcode-version >>
+    environment:
+      <<: *default-environment
+    steps:
+      - checkout
+      - set-ruby-version
+      - install-gems
+      - print-tool-versions
+      - set-git-credentials
+      - publish-to-trunk
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - init-and-lint:
+          name: init-and-lint-xcode-<< matrix.xcode-version >>
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+      - publish-pod-release:
+          filters:
+            branches: { only: master }
