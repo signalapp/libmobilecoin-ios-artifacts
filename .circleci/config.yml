@@ -11,6 +11,14 @@ defaults:
     testNetTestAccountMnemonicsCommaSeparated:
 
 commands:
+  init-mobilecoin-submodule:
+    description: Initialize mobilecoin submodule
+    steps:
+      - run:
+          name: Run git submodule update --init
+          working_directory: Vendor/mobilecoin
+          command: git submodule update --init --depth 1 --recursive
+
   print-tool-versions:
     description: Print versions of various tools used
     steps:
@@ -73,9 +81,6 @@ commands:
 
   lint-locally-podspec:
     steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "c2:90:32:ec:0e:38:09:a0:b0:d7:20:23:68:bc:8d:6f"
       - run:
           name: Lint podspec locally
           command: make lint-locally
@@ -84,7 +89,7 @@ commands:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "c2:90:32:ec:0e:38:09:a0:b0:d7:20:23:68:bc:8d:6f"
+            - "16:4d:90:f0:c4:2b:2e:ac:96:7b:6b:8b:e0:ce:72:28"
       - run:
           name: Publish Pod to Trunk
           command: make publish
@@ -115,6 +120,7 @@ jobs:
       SCAN_OUTPUT_TYPES: junit
     steps:
       - checkout
+      - init-mobilecoin-submodule
       - set-ruby-version
       - install-gems
       - print-tool-versions
@@ -138,6 +144,7 @@ jobs:
       <<: *default-environment
     steps:
       - checkout
+      - init-mobilecoin-submodule
       - set-ruby-version
       - install-gems
       - print-tool-versions
