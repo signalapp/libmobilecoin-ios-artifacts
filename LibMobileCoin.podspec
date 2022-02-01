@@ -23,8 +23,8 @@ Pod::Spec.new do |s|
 
   # ――― Subspecs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
-  s.default_subspecs = :none
-  # s.default_subspecs = "Core"
+  # s.default_subspecs = :none
+  s.default_subspecs = "Core"
 
    s.subspec "TestVectors" do |subspec|
      subspec.source_files = "Sources/TestVector/**/*.swift"
