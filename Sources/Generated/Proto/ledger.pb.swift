@@ -214,6 +214,28 @@ public struct FogLedger_GetOutputsResponse {
   //// The total number of Txos in the ledger at the time the request is evaluated
   public var globalTxoCount: UInt64 = 0
 
+  //// The latest block_version of a block in the block chain
+  ////
+  //// This may be needed when building transactions, so that use of new transaction
+  //// features can be gated on the block version being increased.
+  ////
+  //// Clients may also choose to prompt users to update their software if
+  //// the block version increases beyond what was "known" when the software
+  //// was built.
+  public var latestBlockVersion: UInt32 = 0
+
+  //// The max of latest_block_version and the MAX_BLOCK_VERSION value
+  //// in mc-transaction-core (in this deploy of fog ledger).
+  ////
+  //// Usually when we redeploy consensus, we also redeploy fog. So this should
+  //// usually be equal to the MAX_BLOCK_VERSION value in the consensus enclave.
+  //// (In case it isn't, it won't be less than latest_block_version.)
+  ////
+  //// This is possibly an additional signal that clients can use to discover
+  //// that there is a new version of transaction-core that may be available
+  //// for an update (by comparing to their local value of max_block_version).
+  public var maxBlockVersion: UInt32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -332,6 +354,28 @@ public struct FogLedger_CheckKeyImagesResponse {
 
   //// The results for each key image query
   public var results: [FogLedger_KeyImageResult] = []
+
+  //// The latest block_version of a block in the block chain
+  ////
+  //// This may be needed when building transactions, so that use of new transaction
+  //// features can be gated on the block version being increased.
+  ////
+  //// Clients may also choose to prompt users to update their software if
+  //// the block version increases beyond what was "known" when the software
+  //// was built.
+  public var latestBlockVersion: UInt32 = 0
+
+  //// The max of latest_block_version and the MAX_BLOCK_VERSION value
+  //// in mc-transaction-core (in this deploy of fog ledger).
+  ////
+  //// Usually when we redeploy consensus, we also redeploy fog. So this should
+  //// usually be equal to the MAX_BLOCK_VERSION value in the consensus enclave.
+  //// (In case it isn't, it won't be less than latest_block_version.)
+  ////
+  //// This is possibly an additional signal that clients can use to discover
+  //// that there is a new version of transaction-core that may be available
+  //// for an update (by comparing to their local value of max_block_version).
+  public var maxBlockVersion: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -595,6 +639,8 @@ extension FogLedger_GetOutputsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     1: .same(proto: "results"),
     2: .standard(proto: "num_blocks"),
     3: .standard(proto: "global_txo_count"),
+    4: .standard(proto: "latest_block_version"),
+    5: .standard(proto: "max_block_version"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -606,6 +652,8 @@ extension FogLedger_GetOutputsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.results) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.numBlocks) }()
       case 3: try { try decoder.decodeSingularUInt64Field(value: &self.globalTxoCount) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.latestBlockVersion) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.maxBlockVersion) }()
       default: break
       }
     }
@@ -621,6 +669,12 @@ extension FogLedger_GetOutputsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     if self.globalTxoCount != 0 {
       try visitor.visitSingularUInt64Field(value: self.globalTxoCount, fieldNumber: 3)
     }
+    if self.latestBlockVersion != 0 {
+      try visitor.visitSingularUInt32Field(value: self.latestBlockVersion, fieldNumber: 4)
+    }
+    if self.maxBlockVersion != 0 {
+      try visitor.visitSingularUInt32Field(value: self.maxBlockVersion, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -628,6 +682,8 @@ extension FogLedger_GetOutputsResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     if lhs.results != rhs.results {return false}
     if lhs.numBlocks != rhs.numBlocks {return false}
     if lhs.globalTxoCount != rhs.globalTxoCount {return false}
+    if lhs.latestBlockVersion != rhs.latestBlockVersion {return false}
+    if lhs.maxBlockVersion != rhs.maxBlockVersion {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -767,6 +823,8 @@ extension FogLedger_CheckKeyImagesResponse: SwiftProtobuf.Message, SwiftProtobuf
     1: .standard(proto: "num_blocks"),
     2: .standard(proto: "global_txo_count"),
     3: .same(proto: "results"),
+    4: .standard(proto: "latest_block_version"),
+    5: .standard(proto: "max_block_version"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -778,6 +836,8 @@ extension FogLedger_CheckKeyImagesResponse: SwiftProtobuf.Message, SwiftProtobuf
       case 1: try { try decoder.decodeSingularUInt64Field(value: &self.numBlocks) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.globalTxoCount) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.results) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.latestBlockVersion) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.maxBlockVersion) }()
       default: break
       }
     }
@@ -793,6 +853,12 @@ extension FogLedger_CheckKeyImagesResponse: SwiftProtobuf.Message, SwiftProtobuf
     if !self.results.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.results, fieldNumber: 3)
     }
+    if self.latestBlockVersion != 0 {
+      try visitor.visitSingularUInt32Field(value: self.latestBlockVersion, fieldNumber: 4)
+    }
+    if self.maxBlockVersion != 0 {
+      try visitor.visitSingularUInt32Field(value: self.maxBlockVersion, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -800,6 +866,8 @@ extension FogLedger_CheckKeyImagesResponse: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.numBlocks != rhs.numBlocks {return false}
     if lhs.globalTxoCount != rhs.globalTxoCount {return false}
     if lhs.results != rhs.results {return false}
+    if lhs.latestBlockVersion != rhs.latestBlockVersion {return false}
+    if lhs.maxBlockVersion != rhs.maxBlockVersion {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
