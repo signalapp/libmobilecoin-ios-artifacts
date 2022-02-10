@@ -390,7 +390,7 @@ public struct FogView_TxOutRecord {
   public var txOutAmountCommitmentDataCrc32: UInt32 = 0
 
   //// The bytes of the encrypted memo.
-  //// This exactly 46 bytes when present.
+  //// This exactly 66 bytes when present.
   //// This is omitted for TxOut's from before the upgrade that introduced memos.
   public var txOutEMemoData: Data = Data()
 
