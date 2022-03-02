@@ -1,16 +1,280 @@
 version: 2.1
 
 defaults:
-  default-xcode-version: &default-xcode-version "12.2.0"
+  default-xcode-version: &default-xcode-version "12.5.1"
   default-ruby-version: &default-ruby-version "2.7"
 
   default-environment: &default-environment
     FASTLANE_SKIP_UPDATE_CHECK: "1"
-    devNetworkAuthUsername:
-    devNetworkAuthPassword:
-    testNetTestAccountMnemonicsCommaSeparated:
+
+  default-artifact-build-environment: &default-build-environment
+    <<: *default-environment
+    IAS_MODE: DEV
+    SGX_MODE: SW
+    RUST_BACKTRACE: "1"
+    SKIP_SLOW_TESTS: "1"
+
+executors:
+  macos:
+    parameters:
+      xcode-version: { type: string, default: *default-xcode-version }
+    macos:
+      xcode: << parameters.xcode-version >>
+    environment:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      HOMEBREW_BUNDLE_NO_LOCK: "1"
 
 commands:
+  #
+  # Copied from `mobilecoin` repo to configure build environment for our submodule.
+  #
+  print_versions:
+    description: Version Info
+    steps:
+      - run:
+          name: Version Info
+          working_directory: Vendor/mobilecoin
+          command: |
+            set -x
+
+            rustup show
+            rustc --version
+            cargo --version
+            rustup --version
+            command -v jq >/dev/null && jq --version || true
+
+  env_setup:
+    description: Environment Setup
+    steps:
+      - run:
+          name: Configure Cargo to use git cli
+          working_directory: Vendor/mobilecoin
+          command: |
+            mkdir -p ~/.cargo
+            echo '[net]' >> ~/.cargo/config
+            echo 'git-fetch-with-cli = true' >> ~/.cargo/config
+
+            if [ -f ~/.gitconfig ]; then
+              sed -i -e 's/github/git-non-exist-hub/g' ~/.gitconfig # https://github.com/rust-lang/cargo/issues/3900
+            fi
+      - run:
+          name: Set utility environment variables
+          command: |
+            HOST_TARGET_TRIPLE="$(rustc -Vv | sed -n 's/^host: //p')"
+            echo "export HOST_TARGET_TRIPLE=\"$HOST_TARGET_TRIPLE\"" >> $BASH_ENV
+            echo "export HOST_TARGET_TRIPLE=\"$(rustc -Vv | sed -n 's/^host: //p')\"" >> $BASH_ENV
+
+  restore-homebrew-cache:
+    steps:
+      - restore_cache:
+          name: Restore Homebrew cache
+          key: v0-homebrew-{{ arch }}
+      - run:
+          name: Update Homebrew
+          working_directory: Vendor/mobilecoin
+          command: |
+            brew --version
+            brew update --preinstall
+            brew --version
+      - run:
+          name: Install Homebrew dependencies
+          working_directory: Vendor/mobilecoin
+          command: |
+            rm '/usr/local/lib/python3.9/site-packages/six.py'
+            brew install llvm
+            brew install ninja
+            brew bundle --no-upgrade
+
+  save-homebrew-cache:
+    steps:
+      - run:
+          name: Prepare Homebrew cache for saving
+          working_directory: Vendor/mobilecoin
+          command: |
+            # Make sure latest versions are installed
+            time brew bundle
+
+            # Remove all dependencies except those in the Brewfile
+            time brew bundle cleanup --force
+
+            brew info
+      - save_cache:
+          name: Save Homebrew cache
+          key: v0-homebrew-{{ arch }}-{{ .Revision }}
+          paths:
+            - /usr/local/Cellar
+
+
+  skip-if-cache-directory-exists:
+    description: a command to exit the job if directory exists
+    parameters:
+      directory:
+        description: path to directory cache
+        type: string
+    steps:
+      - run: 
+          name: If cache exists exit ...
+          command: |
+            DIR=<<parameters.directory>>
+            if test -d "$DIR"; then
+                echo "$DIR exists"
+                circleci-agent step halt
+            else
+                echo "$DIR doesnt exists"
+            fi
+
+  skip-if-cache-file-exists:
+    description: a command to exit the job if file exists
+    parameters:
+      file:
+        description: path to file cache
+        type: string
+    steps:
+      - run: 
+          name: If cache exists exit ...
+          command: |
+            FILE=<<parameters.file>>
+            if test -f "$FILE"; then
+                echo "$FILE exists"
+                circleci-agent step halt
+            else
+                echo "$FILE doesnt exists"
+            fi
+
+  #
+  # LibMobileCoin Static Library by build-target
+  # 
+  restore-build-artifact-cache:
+    parameters:
+      build-target:
+        description: Build target triplet
+        type: string
+    steps:
+      - print-mobilecoin-submodule-hash
+      - restore_cache:
+          name: Restore build artifact libmobilecoin.a cache for target <<parameters.build-target>>
+          keys: 
+            - v0-build-artifact-<<parameters.build-target>>-{{ checksum "vendor_mobilecoin.hash" }}
+
+  save-build-artifact-cache:
+    parameters:
+      build-target:
+        description: Build target triplet
+        type: string
+    steps:
+      - print-mobilecoin-submodule-hash
+      - save_cache:
+          name: Save build artifact libmobilecoin.a cache for target <<parameters.build-target>>
+          key: v0-build-artifact-<<parameters.build-target>>-{{ checksum "vendor_mobilecoin.hash" }}
+          paths:
+            - ~/project/Vendor/mobilecoin/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release
+
+  #
+  # LibMobileCoin Headers
+  # 
+  restore-build-artifact-headers-cache:
+    steps:
+      - print-mobilecoin-submodule-hash
+      - restore_cache:
+          name: Restore build artifact headers cache
+          keys: 
+            - v0-build-artifact-headers-{{ checksum "vendor_mobilecoin.hash" }}
+
+  save-build-artifact-headers-cache:
+    steps:
+      - print-mobilecoin-submodule-hash
+      - save_cache:
+          name: Save build artifact headers cache
+          key: v0-build-artifact-headers-{{ checksum "vendor_mobilecoin.hash" }}
+          paths:
+            - ~/project/Vendor/mobilecoin/libmobilecoin/out/ios/include
+
+  #
+  # Rustup Toolchain Cache's
+  #
+  restore-rustup-cache:
+    parameters:
+      build-target:
+        description: Build target triplet
+        type: string
+    steps:
+      - restore_cache:
+          name: Restore Rustup cache for target <<parameters.build-target>>
+          keys: 
+            - v0-rustup-<<parameters.build-target>>-{{ checksum "Vendor/mobilecoin/libmobilecoin/toolchain-config.env" }}
+
+  save-rustup-cache:
+    parameters:
+      build-target:
+        description: Build target triplet
+        type: string
+    steps:
+      - save_cache:
+          name: Save Rustup cache for target aarch64-apple-ios-sim
+          key: v0-rustup-<<parameters.build-target>>-{{ checksum "Vendor/mobilecoin/libmobilecoin/toolchain-config.env" }}
+          paths:
+            - ~/.rustup/toolchains
+
+  #
+  # Dependencies
+  #
+  install-rust:
+    steps:
+      - run:
+          name: Install Rust
+          command: |
+            command -v rustup >/dev/null \
+              || curl https://sh.rustup.rs --tlsv1.2 -sSf | sh -s -- -y --default-toolchain stable
+            # Installs the toolchain specified in `rust-toolchain`
+            "$HOME/.cargo/bin/rustup" show active-toolchain
+
+  update-ci-deps:
+    steps:
+      - run:
+          name: Update CI dependencies
+          working_directory: Vendor/mobilecoin
+          command: |
+            cd ..
+            rustup default stable
+            command -v cargo-install-update >/dev/null || cargo install cargo-update
+            cargo install-update --all
+            time cargo uninstall cargo-update
+
+  prefetch-cargo-deps:
+    steps:
+      - run:
+          name: Fetch project Cargo dependencies
+          working_directory: Vendor/mobilecoin
+          command: |
+            set -x
+            time cargo fetch --locked
+            (cd consensus/enclave/trusted && time cargo fetch --locked)
+            (cd fog/ingest/enclave/trusted && time cargo fetch --locked)
+            (cd fog/ledger/enclave/trusted && time cargo fetch --locked)
+            (cd fog/view/enclave/trusted && time cargo fetch --locked)
+
+  prepare-for-build:
+    parameters:
+      cbindgen: { type: boolean, default: false }
+      os: { type: enum, enum: [ "linux", "macos", "windows" ], default: linux }
+    steps:
+      - checkout
+      - when:
+          condition: { equal: [ << parameters.os >>, macos ] }
+          steps: [ restore-homebrew-cache ]
+      - install-rust
+      - env_setup
+      - when:
+          condition: { equal: [ << pipeline.git.branch >>, master ] }
+          steps: [ update-ci-deps ]
+      - print_versions
+      - prefetch-cargo-deps
+
+  #
+  # libmobilecoin-ios-artifacts cocoapods lint/spec publish
+  #
+
   init-mobilecoin-submodule:
     description: Initialize mobilecoin submodule
     steps:
@@ -18,6 +282,14 @@ commands:
           name: Run git submodule update --init
           working_directory: Vendor/mobilecoin
           command: git submodule update --init --depth 1 --recursive
+
+  print-mobilecoin-submodule-hash:
+    description: Save mobilecoin submodule hash to file
+    steps:
+      - run:
+          name: Save submodule hash to file for checksumming
+          command: |
+            git submodule status > vendor_mobilecoin.hash
 
   print-tool-versions:
     description: Print versions of various tools used
@@ -94,6 +366,15 @@ commands:
           name: Publish Pod to Trunk
           command: make publish
 
+  make-push-generated:
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "0b:63:05:5c:f9:37:25:a8:85:7a:8e:2c:8d:96:1a:39"
+      - run:
+          name: Push generated to remote
+          command: make push-generated
+
   check-dirty-git:
     steps:
       - run:
@@ -126,11 +407,6 @@ jobs:
       - print-tool-versions
       - set-git-credentials
       - lint-locally-podspec
-      #- run: make build # TODO
-      #- run: make test # TODO
-      - store_artifacts: { path: output }
-      - store_test_results: { path: output/scan }
-      - store_artifacts: { path: ~/Library/Logs/DiagnosticReports }
       - check-dirty-git
 
   publish-pod-release:
@@ -151,6 +427,140 @@ jobs:
       - set-git-credentials
       - publish-to-trunk
 
+  build-toolchain:
+    parameters:
+      xcode-version: { type: string, default: *default-xcode-version }
+      build-target:
+        type: string
+        default: "aarch64-apple-ios-sim"
+    executor:
+      name: macos
+      xcode-version: << parameters.xcode-version >>
+    environment:
+      <<: *default-build-environment
+      OPENSSL_BIN: /usr/local/opt/openssl/bin/openssl
+    steps:
+      - checkout
+      - init-mobilecoin-submodule
+      - run:
+          name: Make rustup toolchains directory
+          working_directory: Vendor/mobilecoin/libmobilecoin
+          command: |
+            mkdir -p ~/.rustup/toolchains
+      - restore-rustup-cache:
+          build-target: <<parameters.build-target>>
+      - skip-if-cache-directory-exists:
+          directory: ~/.rustup/toolchains/ios-<<parameters.build-target>>-nightly-2021-08-01-swift-5-3-2
+      - prepare-for-build: { os: macos }
+      - run:
+          working_directory: Vendor/mobilecoin
+          name: Build rustup toolchains for a build target
+          command: |
+            cd libmobilecoin
+            make setup
+            make toolchain_<< parameters.build-target >>
+
+      - save-rustup-cache:
+          build-target: <<parameters.build-target>>
+      - save-homebrew-cache 
+      
+  build-artifacts:
+    parameters:
+      xcode-version: { type: string, default: *default-xcode-version }
+      build-target:
+        type: string
+        default: "aarch64-apple-ios-sim"
+    executor:
+      name: macos
+      xcode-version: << parameters.xcode-version >>
+    environment:
+      <<: *default-build-environment
+      OPENSSL_BIN: /usr/local/opt/openssl/bin/openssl
+    steps:
+      - checkout
+      - init-mobilecoin-submodule
+      - restore-build-artifact-cache:
+          build-target: <<parameters.build-target>>
+      - skip-if-cache-file-exists:
+          file: ~/project/Vendor/mobilecoin/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release/libmobilecoin.a
+      - prepare-for-build: { os: macos }
+      - restore-rustup-cache:
+          build-target: <<parameters.build-target>>
+      - run:
+          working_directory: Vendor/mobilecoin
+          name: Build libmobilecoin static libraries
+          command: |
+            cd libmobilecoin
+            make setup
+            make << parameters.build-target >>
+
+      - save-build-artifact-headers-cache
+      - save-build-artifact-cache:
+          build-target: <<parameters.build-target>>
+
+  copy-artifacts:
+    parameters:
+      xcode-version: { type: string, default: *default-xcode-version }
+    executor:
+      name: macos
+      xcode-version: << parameters.xcode-version >>
+    environment:
+      <<: *default-build-environment
+    steps:
+      - checkout
+      - init-mobilecoin-submodule
+      - run:
+          name: Make output directories
+          working_directory: Vendor/mobilecoin/libmobilecoin
+          command: |
+            mkdir -p out/ios/target
+
+      - restore-build-artifact-cache:
+          build-target: aarch64-apple-ios-sim 
+      - restore-build-artifact-cache:
+          build-target: aarch64-apple-ios-macabi 
+      - restore-build-artifact-cache:
+          build-target: aarch64-apple-ios 
+      - restore-build-artifact-cache:
+          build-target: x86_64-apple-ios-macabi 
+      - restore-build-artifact-cache:
+          build-target: x86_64-apple-ios 
+      - restore-build-artifact-cache:
+          build-target: x86_64-apple-ios-darwin 
+      - restore-build-artifact-headers-cache
+      - run:
+          name: Copy Artifacts 
+          command: |
+            make copy
+
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - Artifacts
+
+  make-generate:
+    machine: 
+      image: ubuntu-2004:202111-02
+    environment:
+      <<: *default-build-environment
+    steps:
+      - checkout
+      - init-mobilecoin-submodule
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Copy artifacts from workspce
+          command: |
+            rm -rf Artifacts
+            cp -R /tmp/workspace/Artifacts ./
+      - run:
+          name: make generate (proto -> grpc swift) 
+          command: |
+            make generate
+
+      - set-git-credentials
+      - make-push-generated
+            
 workflows:
   version: 2
   build:
@@ -160,6 +570,115 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+
+      # ios-sim
+      - build-toolchain:
+          name: build-toolchain-m1-ios-sim-xcode-<< matrix.xcode-version >>
+          build-target: "aarch64-apple-ios-sim" 
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+      - build-artifacts:
+          name: build-artifacts-m1-ios-sim-xcode-<< matrix.xcode-version >>
+          build-target: "aarch64-apple-ios-sim" 
+          requires: [build-toolchain-m1-ios-sim-xcode-<< matrix.xcode-version >>]
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
+      # m1-catalyst
+      - build-toolchain:
+          name: build-toolchain-m1-catalyst-xcode-<< matrix.xcode-version >>
+          build-target: "aarch64-apple-ios-macabi" 
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+      - build-artifacts:
+          name: build-artifacts-m1-catalyst-xcode-<< matrix.xcode-version >>
+          build-target: "aarch64-apple-ios-macabi" 
+          requires: [build-toolchain-m1-catalyst-xcode-<< matrix.xcode-version >>]
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
+      # ios-device
+      - build-toolchain:
+          name: build-toolchain-ios-device-xcode-<< matrix.xcode-version >>
+          build-target: "aarch64-apple-ios" 
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+      - build-artifacts:
+          name: build-artifacts-ios-device-xcode-<< matrix.xcode-version >>
+          build-target: "aarch64-apple-ios" 
+          requires: [build-toolchain-ios-device-xcode-<< matrix.xcode-version >>]
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
+      # intel-catalyst
+      - build-toolchain:
+          name: build-toolchain-intel-catalyst-xcode-<< matrix.xcode-version >>
+          build-target: "x86_64-apple-ios-macabi" 
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+      - build-artifacts:
+          name: build-artifacts-intel-catalyst-xcode-<< matrix.xcode-version >>
+          build-target: "x86_64-apple-ios-macabi" 
+          requires: [build-toolchain-intel-catalyst-xcode-<< matrix.xcode-version >>]
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
+      # intel-ios-sim
+      - build-toolchain:
+          name: build-toolchain-intel-ios-sim-xcode-<< matrix.xcode-version >>
+          build-target: "x86_64-apple-ios"
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+      - build-artifacts:
+          name: build-artifacts-intel-ios-sim-xcode-<< matrix.xcode-version >>
+          build-target: "x86_64-apple-ios"
+          requires: [build-toolchain-intel-ios-sim-xcode-<< matrix.xcode-version >>]
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
+      # intel-macos
+      - build-toolchain:
+          name: build-toolchain-intel-macos-xcode-<< matrix.xcode-version >>
+          build-target: "x86_64-apple-darwin"
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+      - build-artifacts:
+          name: build-artifacts-intel-macos-xcode-<< matrix.xcode-version >>
+          build-target: "x86_64-apple-darwin"
+          requires: [build-toolchain-intel-macos-xcode-<< matrix.xcode-version >>]
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
+      - copy-artifacts:
+          name: copy-artifacats
+          requires:
+            - build-artifacts-m1-ios-sim-xcode-<< matrix.xcode-version >>
+            - build-artifacts-m1-catalyst-xcode-<< matrix.xcode-version >>
+            - build-artifacts-ios-device-xcode-<< matrix.xcode-version >>
+            - build-artifacts-intel-catalyst-xcode-<< matrix.xcode-version >>
+            - build-artifacts-intel-ios-sim-xcode-<< matrix.xcode-version >>
+            - build-artifacts-intel-macos-xcode-<< matrix.xcode-version >>
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
+      - make-generate:
+          name: make generate
+          requires:
+            - copy-artifacts
+
       - publish-pod-release:
           filters:
             branches: { only: master }
