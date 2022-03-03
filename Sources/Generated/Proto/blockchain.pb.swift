@@ -266,6 +266,18 @@ public struct Blockchain_ArchiveBlocks {
   public init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Blockchain_BlockID: @unchecked Sendable {}
+extension Blockchain_BlockContentsHash: @unchecked Sendable {}
+extension Blockchain_Block: @unchecked Sendable {}
+extension Blockchain_BlockContents: @unchecked Sendable {}
+extension Blockchain_BlockSignature: @unchecked Sendable {}
+extension Blockchain_ArchiveBlockV1: @unchecked Sendable {}
+extension Blockchain_ArchiveBlock: @unchecked Sendable {}
+extension Blockchain_ArchiveBlock.OneOf_Block: @unchecked Sendable {}
+extension Blockchain_ArchiveBlocks: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "blockchain"

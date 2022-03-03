@@ -256,6 +256,14 @@ public struct ConsensusCommon_ProposeTxResponse {
   public init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension ConsensusCommon_ProposeTxResult: @unchecked Sendable {}
+extension ConsensusCommon_LastBlockInfoResponse: @unchecked Sendable {}
+extension ConsensusCommon_BlocksRequest: @unchecked Sendable {}
+extension ConsensusCommon_BlocksResponse: @unchecked Sendable {}
+extension ConsensusCommon_ProposeTxResponse: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "consensus_common"

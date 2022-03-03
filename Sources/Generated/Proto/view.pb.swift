@@ -399,6 +399,17 @@ public struct FogView_TxOutRecord {
   public init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension FogView_TxOutSearchResultCode: @unchecked Sendable {}
+extension FogView_QueryRequestAAD: @unchecked Sendable {}
+extension FogView_QueryRequest: @unchecked Sendable {}
+extension FogView_QueryResponse: @unchecked Sendable {}
+extension FogView_RngRecord: @unchecked Sendable {}
+extension FogView_DecommissionedIngestInvocation: @unchecked Sendable {}
+extension FogView_TxOutSearchResult: @unchecked Sendable {}
+extension FogView_TxOutRecord: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fog_view"

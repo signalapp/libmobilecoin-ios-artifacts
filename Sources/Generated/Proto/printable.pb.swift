@@ -159,6 +159,13 @@ public struct Printable_PrintableWrapper {
   public init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Printable_PaymentRequest: @unchecked Sendable {}
+extension Printable_TransferPayload: @unchecked Sendable {}
+extension Printable_PrintableWrapper: @unchecked Sendable {}
+extension Printable_PrintableWrapper.OneOf_Wrapper: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "printable"
