@@ -6,11 +6,14 @@ defaults:
 
   default-environment: &default-environment
     FASTLANE_SKIP_UPDATE_CHECK: "1"
+    DEV_NETWORK_AUTH_USERNAME:
+    DEV_NETWORK_AUTH_PASSWORD:
+    TEST_NET_TEST_ACCOUNT_MNEMONICS_COMMA_SEPARATED:
 
   default-artifact-build-environment: &default-build-environment
     <<: *default-environment
     IAS_MODE: DEV
-    SGX_MODE: SW
+    SGX_MODE: HW
     RUST_BACKTRACE: "1"
     SKIP_SLOW_TESTS: "1"
 
@@ -43,6 +46,11 @@ commands:
             cargo --version
             rustup --version
             command -v jq >/dev/null && jq --version || true
+            xcodebuild -version
+            xcode-select -p
+            clang -v
+            llvm-gcc -v
+            make -v
 
   env_setup:
     description: Environment Setup
@@ -155,7 +163,7 @@ commands:
       - restore_cache:
           name: Restore build artifact libmobilecoin.a cache for target <<parameters.build-target>>
           keys: 
-            - v0-build-artifact-<<parameters.build-target>>-{{ checksum "vendor_mobilecoin.hash" }}
+            - v2-build-artifact-<<parameters.build-target>>-{{ checksum "vendor_mobilecoin.hash" }}
 
   save-build-artifact-cache:
     parameters:
@@ -166,7 +174,7 @@ commands:
       - print-mobilecoin-submodule-hash
       - save_cache:
           name: Save build artifact libmobilecoin.a cache for target <<parameters.build-target>>
-          key: v0-build-artifact-<<parameters.build-target>>-{{ checksum "vendor_mobilecoin.hash" }}
+          key: v2-build-artifact-<<parameters.build-target>>-{{ checksum "vendor_mobilecoin.hash" }}
           paths:
             - ~/project/Vendor/mobilecoin/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release
 
@@ -179,14 +187,14 @@ commands:
       - restore_cache:
           name: Restore build artifact headers cache
           keys: 
-            - v0-build-artifact-headers-{{ checksum "vendor_mobilecoin.hash" }}
+            - v2-build-artifact-headers-{{ checksum "vendor_mobilecoin.hash" }}
 
   save-build-artifact-headers-cache:
     steps:
       - print-mobilecoin-submodule-hash
       - save_cache:
           name: Save build artifact headers cache
-          key: v0-build-artifact-headers-{{ checksum "vendor_mobilecoin.hash" }}
+          key: v2-build-artifact-headers-{{ checksum "vendor_mobilecoin.hash" }}
           paths:
             - ~/project/Vendor/mobilecoin/libmobilecoin/out/ios/include
 
@@ -229,18 +237,6 @@ commands:
             # Installs the toolchain specified in `rust-toolchain`
             "$HOME/.cargo/bin/rustup" show active-toolchain
 
-  update-ci-deps:
-    steps:
-      - run:
-          name: Update CI dependencies
-          working_directory: Vendor/mobilecoin
-          command: |
-            cd ..
-            rustup default stable
-            command -v cargo-install-update >/dev/null || cargo install cargo-update
-            cargo install-update --all
-            time cargo uninstall cargo-update
-
   prefetch-cargo-deps:
     steps:
       - run:
@@ -265,9 +261,6 @@ commands:
           steps: [ restore-homebrew-cache ]
       - install-rust
       - env_setup
-      - when:
-          condition: { equal: [ << pipeline.git.branch >>, master ] }
-          steps: [ update-ci-deps ]
       - print_versions
       - prefetch-cargo-deps
 
@@ -341,6 +334,174 @@ commands:
           key: v0-ruby-<< parameters.ruby-version >>-gems-{{ checksum "Gemfile.lock" }}
           paths:
             - .vendor/bundle
+
+  # 
+  # MobileCoin-Swift for testing
+  #
+  init-mobilecoin-swift:
+    description: Initialize MobileCoin-Swift
+    steps:
+      - run:
+          name: Run git clone git@github.com:mobilecoinofficial/MobileCoin-Swift.git
+          command: |
+            cd ~
+            git clone git@github.com:mobilecoinofficial/MobileCoin-Swift.git
+
+  apply-cherry-pick:
+    description: Cherry-Pick changes to make swift repo compatible
+    steps:
+      - run:
+          name: Cherry-Pick changes to make swift repo compatible
+          working_directory: ~/MobileCoin-Swift
+          command: |
+            git fetch origin cicd/temporary-version-syntax-change
+            git cherry-pick 1a34956a8910b1b6f866b0ac0c52d286691e6dec
+
+  configure-cocoapod-keys:
+    description: Configure cocoapod-keys secrets
+    parameters:
+      swift-project:
+        type: string
+        default: "Example"
+    steps:
+      - run:
+          name: Configure cocoapod-keys secrets
+          working_directory: ~/MobileCoin-Swift/<<parameters.swift-project>>
+          command: |
+            bundle exec pod keys set devNetworkAuthUsername "${DEV_NETWORK_AUTH_USERNAME}"
+            bundle exec pod keys set devNetworkAuthPassword "${DEV_NETWORK_AUTH_PASSWORD}"
+            bundle exec pod keys set testNetTestAccountMnemonicsCommaSeparated "${TEST_NET_TEST_ACCOUNT_MNEMONICS_COMMA_SEPARATED}"
+
+  install-swift-gems:
+    description: Install Ruby gems
+    parameters:
+      ruby-version:
+        type: string
+        default: *default-ruby-version
+    steps:
+      - restore_cache:
+          name: Restore Ruby gem cache swift sdk
+          keys:
+            - v1-ruby-<< parameters.ruby-version >>-gems-{{ checksum "~/MobileCoin-Swift/Gemfile.lock" }}
+            - v1-ruby-<< parameters.ruby-version >>-gems-
+      - run:
+          name: Install root bundler dependencies
+          working_directory: ~/MobileCoin-Swift
+          command: |
+            bundle config set --local deployment 'true'
+            bundle config set --local path '~/MobileCoin-Swift/.vendor/bundle'
+            bundle config set --local clean 'true'
+            bundle check || bundle install
+      - save_cache:
+          name: Save Ruby gem cache swift sdk
+          key: v1-ruby-<< parameters.ruby-version >>-gems-{{ checksum "~/MobileCoin-Swift/Gemfile.lock" }}
+          paths:
+            - ~/MobileCoin-Swift/.vendor/bundle
+
+  install-example-gems:
+    description: Install gems for Example project
+    parameters:
+      ruby-version:
+        type: string
+        default: *default-ruby-version
+    steps:
+      - restore_cache:
+          name: Restore Ruby gem cache for Example project
+          keys:
+            - v0-example-ruby-<< parameters.ruby-version >>-gems-{{ checksum "~/MobileCoin-Swift/Example/Gemfile.lock" }}
+            - v0-example-ruby-<< parameters.ruby-version >>-gems-
+      - run:
+          name: Install Example project bundler dependencies
+          working_directory: ~/MobileCoin-Swift/Example
+          command: |
+            bundle config set --local deployment 'true'
+            bundle config set --local path '.vendor/bundle'
+            bundle config set --local clean 'true'
+            bundle check || bundle install
+      - save_cache:
+          name: Save Ruby gem cache for Example project
+          key: v0-example-ruby-<< parameters.ruby-version >>-gems-{{ checksum "~/MobileCoin-Swift/Example/Gemfile.lock" }}
+          paths:
+            - ~/MobileCoin-Swift/Example/.vendor/bundle
+
+  install-example-http-gems:
+    description: Install gems for ExampleHTTP project
+    parameters:
+      ruby-version:
+        type: string
+        default: *default-ruby-version
+    steps:
+      - restore_cache:
+          name: Restore Ruby gem cache for ExampleHTTP project
+          keys:
+            - v0-example-http-ruby-<< parameters.ruby-version >>-gems-{{ checksum "~/MobileCoin-Swift/ExampleHTTP/Gemfile.lock" }}
+            - v0-example-http-ruby-<< parameters.ruby-version >>-gems-
+      - run:
+          name: Install ExampleHTTP project bundler dependencies
+          working_directory: ~/MobileCoin-Swift/ExampleHTTP
+          command: |
+            bundle config set --local deployment 'true'
+            bundle config set --local path '.vendor/bundle'
+            bundle config set --local clean 'true'
+            bundle check || bundle install
+      - save_cache:
+          name: Save Ruby gem cache for ExampleHTTP project
+          key: v0-example-http-ruby-<< parameters.ruby-version >>-gems-{{ checksum "~/MobileCoin-Swift/ExampleHTTP/Gemfile.lock" }}
+          paths:
+            - ~/MobileCoin-Swift/ExampleHTTP/.vendor/bundle
+
+  install-example-pods:
+    description: Install pods for Example project
+    parameters:
+      xcode-version:
+        type: string
+    steps:
+      - restore_cache:
+          name: Restore CocoaPods cache
+          keys:
+            - v0-xcode-<< parameters.xcode-version >>-example-pods-{{ checksum "~/MobileCoin-Swift/Example/Podfile.lock" }}
+            - v0-xcode-<< parameters.xcode-version >>-example-pods-
+      - run: 
+          name: Install pods for Example project
+          command: cd ~/MobileCoin-Swift/Example && bundle exec pod install
+      - save_cache:
+          name: Save CocoaPods cache
+          key: v0-xcode-<< parameters.xcode-version >>-example-pods-{{ checksum "~/MobileCoin-Swift/Example/Podfile.lock" }}
+          paths:
+            - ~/MobileCoin-Swift/Example/Pods
+
+  install-example-http-pods:
+    description: Install pods for ExampleHTTP project
+    parameters:
+      xcode-version:
+        type: string
+    steps:
+      - restore_cache:
+          name: Restore CocoaPods cache
+          keys:
+            - v0-xcode-<< parameters.xcode-version >>-example-http-pods-{{ checksum "~/MobileCoin-Swift/ExampleHTTP/Podfile.lock" }}
+            - v0-xcode-<< parameters.xcode-version >>-example-http-pods-
+      - run: 
+          name: Install pods for ExampleHTTP project
+          command: cd ~/MobileCoin-Swift/ExampleHTTP && bundle exec pod install
+      - save_cache:
+          name: Save CocoaPods cache
+          key: v0-xcode-<< parameters.xcode-version >>-example-http-pods-{{ checksum "~/MobileCoin-Swift/ExampleHTTP/Podfile.lock" }}
+          paths:
+            - ~/MobileCoin-Swift/ExampleHTTP/Pods
+
+  init-mobilecoin-swift-submodules:
+    description: Initialize MobileCoin-Swift submodules
+    steps:
+      - run:
+          name: Clone current branch of LibMobileCoin and its submodules
+          working_directory: ~/MobileCoin-Swift
+          command: |
+            mkdir -p Vendor/libmobilecoin-ios-artifacts
+            git clone --branch ${CIRCLE_BRANCH} ${CIRCLE_REPOSITORY_URL} Vendor/libmobilecoin-ios-artifacts
+            cd Vendor/libmobilecoin-ios-artifacts
+            git submodule update --init --recursive --depth 1
+
 
   set-git-credentials:
     description: Set git credentials
@@ -560,7 +721,77 @@ jobs:
 
       - set-git-credentials
       - make-push-generated
+
+  test-example-http-with-mobilecoin-swift:
+    parameters:
+      xcode-version:
+        type: string
+        default: *default-xcode-version
+      swift-project:
+        type: string
+        default: "ExampleHTTP"
+    macos:
+      xcode: << parameters.xcode-version >>
+    environment:
+      <<: *default-environment
+      FL_BUILDLOG_PATH: ../output/buildlogs
+      SCAN_OUTPUT_DIRECTORY: ../output/scan
+      SCAN_OUTPUT_TYPES: junit
+    steps:
+      - checkout
+      - init-mobilecoin-submodule
+      - set-ruby-version
+      - set-git-credentials
+      - init-mobilecoin-swift
+      - init-mobilecoin-swift-submodules
+      - apply-cherry-pick
+      - install-swift-gems
+      - install-example-http-gems
+      - configure-cocoapod-keys:
+          swift-project: << parameters.swift-project >>
+      - install-example-http-pods:
+          xcode-version: << parameters.xcode-version >>
+      - run:
+          name: make test
+          working_directory: ~/MobileCoin-Swift/<<parameters.swift-project>>
+          command: |
+            make test
             
+  test-example-with-mobilecoin-swift:
+    parameters:
+      xcode-version:
+        type: string
+        default: *default-xcode-version
+      swift-project:
+        type: string
+        default: "Example"
+    macos:
+      xcode: << parameters.xcode-version >>
+    environment:
+      <<: *default-environment
+      FL_BUILDLOG_PATH: ../output/buildlogs
+      SCAN_OUTPUT_DIRECTORY: ../output/scan
+      SCAN_OUTPUT_TYPES: junit
+    steps:
+      - checkout
+      - init-mobilecoin-submodule
+      - set-ruby-version
+      - set-git-credentials
+      - init-mobilecoin-swift
+      - init-mobilecoin-swift-submodules
+      - apply-cherry-pick
+      - install-swift-gems
+      - install-example-gems
+      - configure-cocoapod-keys:
+          swift-project: << parameters.swift-project >>
+      - install-example-pods:
+          xcode-version: << parameters.xcode-version >>
+      - run:
+          name: make test
+          working_directory: ~/MobileCoin-Swift/<<parameters.swift-project>>
+          command: |
+            make test
+
 workflows:
   version: 2
   build:
@@ -675,9 +906,25 @@ workflows:
               xcode-version: [*default-xcode-version]
 
       - make-generate:
-          name: make generate
+          name: make-generate
           requires:
             - copy-artifacts
+
+      - test-example-http-with-mobilecoin-swift:
+          name: test-example-http-with-mobilecoin-swift-<< matrix.xcode-version >>
+          requires: 
+            - make-generate
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
+      - test-example-with-mobilecoin-swift:
+          name: test-example-with-mobilecoin-swift-<< matrix.xcode-version >>
+          requires: 
+            - make-generate
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
 
       - publish-pod-release:
           filters:

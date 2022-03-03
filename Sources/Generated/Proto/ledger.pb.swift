@@ -564,6 +564,25 @@ public struct FogLedger_TxOutResult {
   fileprivate var _txOutPubkey: External_CompressedRistretto? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension FogLedger_OutputResultCode: @unchecked Sendable {}
+extension FogLedger_KeyImageResultCode: @unchecked Sendable {}
+extension FogLedger_TxOutResultCode: @unchecked Sendable {}
+extension FogLedger_GetOutputsRequest: @unchecked Sendable {}
+extension FogLedger_GetOutputsResponse: @unchecked Sendable {}
+extension FogLedger_OutputResult: @unchecked Sendable {}
+extension FogLedger_CheckKeyImagesRequest: @unchecked Sendable {}
+extension FogLedger_KeyImageQuery: @unchecked Sendable {}
+extension FogLedger_CheckKeyImagesResponse: @unchecked Sendable {}
+extension FogLedger_KeyImageResult: @unchecked Sendable {}
+extension FogLedger_BlockRequest: @unchecked Sendable {}
+extension FogLedger_BlockResponse: @unchecked Sendable {}
+extension FogLedger_BlockData: @unchecked Sendable {}
+extension FogLedger_TxOutRequest: @unchecked Sendable {}
+extension FogLedger_TxOutResponse: @unchecked Sendable {}
+extension FogLedger_TxOutResult: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "fog_ledger"

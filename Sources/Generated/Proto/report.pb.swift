@@ -92,6 +92,12 @@ public struct Report_Report {
   fileprivate var _report: External_VerificationReport? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Report_ReportRequest: @unchecked Sendable {}
+extension Report_ReportResponse: @unchecked Sendable {}
+extension Report_Report: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "report"
