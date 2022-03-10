@@ -6,8 +6,15 @@ ARTIFACTS_DIR = Artifacts
 IOS_TARGETS = x86_64-apple-ios aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-ios-macabi x86_64-apple-ios-macabi
 LIBMOBILECOIN_PROFILE = mobile-release
 
+define BINARY_copy
+	$(foreach arch,$(IOS_TARGETS),cp $(LIBMOBILECOIN_ARTIFACTS_DIR)/$(1)/$(arch)/$(LIBMOBILECOIN_PROFILE)/libmobilecoin.a $(ARTIFACTS_DIR)/target/$(arch)/release/libmobilecoin.a;)
+endef
+
 .PHONY: default
-default: setup build copy generate
+default: setup build clean-artifacts copy generate
+
+.PHONY: legacy
+legacy: setup build-legacy clean-artifacts copy-legacy generate
 
 .PHONY: setup
 setup:
@@ -25,16 +32,27 @@ unexport CARGO_PROFILE
 build:
 	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE)
 
-.PHONY: copy
-copy:
+.PHONY: build-legacy
+build-legacy:
+	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE) legacy
+
+.PHONY: clean-artifacts
+copy-legacy:
 	rm -r "$(ARTIFACTS_DIR)" 2>/dev/null || true
 	mkdir -p "$(ARTIFACTS_DIR)"
 
 	# Create arch specific folders for each lib
 	$(foreach arch,$(IOS_TARGETS),mkdir -p $(ARTIFACTS_DIR)/target/$(arch)/release;) 
-	$(foreach arch,$(IOS_TARGETS),cp $(LIBMOBILECOIN_ARTIFACTS_DIR)/target/$(arch)/$(LIBMOBILECOIN_PROFILE)/libmobilecoin.a $(ARTIFACTS_DIR)/target/$(arch)/release/libmobilecoin.a;)
+
+.PHONY: copy
+copy:
+	$(call BINARY_copy,target)
 	cp -R "$(LIBMOBILECOIN_ARTIFACTS_HEADERS)" "$(ARTIFACTS_DIR)"
 
+.PHONY: copy-legacy
+copy-legacy:
+	$(call BINARY_copy,legacy)
+	cp -R "$(LIBMOBILECOIN_ARTIFACTS_HEADERS)" "$(ARTIFACTS_DIR)"
 
 .PHONY: generate
 generate:

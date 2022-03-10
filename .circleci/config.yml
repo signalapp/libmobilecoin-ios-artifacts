@@ -12,8 +12,6 @@ defaults:
 
   default-artifact-build-environment: &default-build-environment
     <<: *default-environment
-    IAS_MODE: DEV
-    SGX_MODE: HW
     RUST_BACKTRACE: "1"
     SKIP_SLOW_TESTS: "1"
 
@@ -744,7 +742,7 @@ jobs:
       - set-git-credentials
       - init-mobilecoin-swift
       - init-mobilecoin-swift-submodules
-      - apply-cherry-pick
+      #- apply-cherry-pick
       - install-swift-gems
       - install-example-http-gems
       - configure-cocoapod-keys:
@@ -779,7 +777,7 @@ jobs:
       - set-git-credentials
       - init-mobilecoin-swift
       - init-mobilecoin-swift-submodules
-      - apply-cherry-pick
+      #- apply-cherry-pick
       - install-swift-gems
       - install-example-gems
       - configure-cocoapod-keys:
