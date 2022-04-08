@@ -170,6 +170,7 @@ public struct Blockchain_BlockSignature {
 }
 
 /// Version 1 of an archived block.
+/// Note: The block.version field within the block may or may not be equal to 1.
 public struct Blockchain_ArchiveBlockV1 {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
