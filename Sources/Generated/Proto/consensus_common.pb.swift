@@ -204,6 +204,14 @@ public struct ConsensusCommon_LastBlockInfoResponse {
   /// A map of token id -> minimum fee
   public var minimumFees: Dictionary<UInt32,UInt64> = [:]
 
+  /// Current network_block version, appropriate for new transactions.
+  ///
+  /// Note that if the server was just reconfigured, this may be HIGHER than
+  /// the highest block version in the ledger, so for clients this is a better
+  /// source of truth than the local ledger, if the client might possibly be
+  /// creating the first transaction after a reconfigure / redeploy.
+  public var networkBlockVersion: UInt32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -250,6 +258,9 @@ public struct ConsensusCommon_ProposeTxResponse {
 
   //// The number of blocks in the ledger at the time the request was received.
   public var blockCount: UInt64 = 0
+
+  //// The block version which is in effect right now
+  public var blockVersion: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -312,6 +323,7 @@ extension ConsensusCommon_LastBlockInfoResponse: SwiftProtobuf.Message, SwiftPro
     1: .same(proto: "index"),
     2: .standard(proto: "mob_minimum_fee"),
     3: .standard(proto: "minimum_fees"),
+    4: .standard(proto: "network_block_version"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -323,6 +335,7 @@ extension ConsensusCommon_LastBlockInfoResponse: SwiftProtobuf.Message, SwiftPro
       case 1: try { try decoder.decodeSingularUInt64Field(value: &self.index) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.mobMinimumFee) }()
       case 3: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufUInt32,SwiftProtobuf.ProtobufUInt64>.self, value: &self.minimumFees) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.networkBlockVersion) }()
       default: break
       }
     }
@@ -338,6 +351,9 @@ extension ConsensusCommon_LastBlockInfoResponse: SwiftProtobuf.Message, SwiftPro
     if !self.minimumFees.isEmpty {
       try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufUInt32,SwiftProtobuf.ProtobufUInt64>.self, value: self.minimumFees, fieldNumber: 3)
     }
+    if self.networkBlockVersion != 0 {
+      try visitor.visitSingularUInt32Field(value: self.networkBlockVersion, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -345,6 +361,7 @@ extension ConsensusCommon_LastBlockInfoResponse: SwiftProtobuf.Message, SwiftPro
     if lhs.index != rhs.index {return false}
     if lhs.mobMinimumFee != rhs.mobMinimumFee {return false}
     if lhs.minimumFees != rhs.minimumFees {return false}
+    if lhs.networkBlockVersion != rhs.networkBlockVersion {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -425,6 +442,7 @@ extension ConsensusCommon_ProposeTxResponse: SwiftProtobuf.Message, SwiftProtobu
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "result"),
     2: .standard(proto: "block_count"),
+    3: .standard(proto: "block_version"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -435,6 +453,7 @@ extension ConsensusCommon_ProposeTxResponse: SwiftProtobuf.Message, SwiftProtobu
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.result) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.blockCount) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.blockVersion) }()
       default: break
       }
     }
@@ -447,12 +466,16 @@ extension ConsensusCommon_ProposeTxResponse: SwiftProtobuf.Message, SwiftProtobu
     if self.blockCount != 0 {
       try visitor.visitSingularUInt64Field(value: self.blockCount, fieldNumber: 2)
     }
+    if self.blockVersion != 0 {
+      try visitor.visitSingularUInt32Field(value: self.blockVersion, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: ConsensusCommon_ProposeTxResponse, rhs: ConsensusCommon_ProposeTxResponse) -> Bool {
     if lhs.result != rhs.result {return false}
     if lhs.blockCount != rhs.blockCount {return false}
+    if lhs.blockVersion != rhs.blockVersion {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
