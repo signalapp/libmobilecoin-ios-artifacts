@@ -70,6 +70,9 @@ lint-locally: lint-locally-podspec
 .PHONY: publish
 publish: tag-release publish-podspec
 
+.PHONY: publish-hotfix
+publish-hotfix: tag-hotfix publish-podspec
+
 .PHONY: push-generated
 push-generated:
 	git add Artifacts/*
@@ -85,6 +88,12 @@ push-generated:
 tag-release:
 	@[[ "$$(git rev-parse --abbrev-ref HEAD)" == "master" ]] || \
 		{ echo 'Error: Must be on branch "master" when tagging a release.'; exit 1; }
+	VERSION="$$(bundle exec pod ipc spec LibMobileCoin.podspec | jq -r '.version')" && \
+		git tag "v$$VERSION" && \
+		git push git@github.com:mobilecoinofficial/libmobilecoin-ios-artifacts.git "refs/tags/v$$VERSION"
+
+.PHONY: tag-hotfix
+tag-hotfix:
 	VERSION="$$(bundle exec pod ipc spec LibMobileCoin.podspec | jq -r '.version')" && \
 		git tag "v$$VERSION" && \
 		git push git@github.com:mobilecoinofficial/libmobilecoin-ios-artifacts.git "refs/tags/v$$VERSION"

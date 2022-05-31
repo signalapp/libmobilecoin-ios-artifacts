@@ -34,6 +34,21 @@ public protocol ConsensusClient_ConsensusClientAPIClientProtocol: GRPCClient {
     _ request: Attest_Message,
     callOptions: CallOptions?
   ) -> UnaryCall<Attest_Message, ConsensusCommon_ProposeTxResponse>
+
+  func proposeMintConfigTx(
+    _ request: External_MintConfigTx,
+    callOptions: CallOptions?
+  ) -> UnaryCall<External_MintConfigTx, ConsensusClient_ProposeMintConfigTxResponse>
+
+  func proposeMintTx(
+    _ request: External_MintTx,
+    callOptions: CallOptions?
+  ) -> UnaryCall<External_MintTx, ConsensusClient_ProposeMintTxResponse>
+
+  func getNodeConfig(
+    _ request: SwiftProtobuf.Google_Protobuf_Empty,
+    callOptions: CallOptions?
+  ) -> UnaryCall<SwiftProtobuf.Google_Protobuf_Empty, ConsensusConfig_ConsensusNodeConfig>
 }
 
 extension ConsensusClient_ConsensusClientAPIClientProtocol {
@@ -59,12 +74,75 @@ extension ConsensusClient_ConsensusClientAPIClientProtocol {
       interceptors: self.interceptors?.makeClientTxProposeInterceptors() ?? []
     )
   }
+
+  //// Propose a new MintConfigTx.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to ProposeMintConfigTx.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func proposeMintConfigTx(
+    _ request: External_MintConfigTx,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<External_MintConfigTx, ConsensusClient_ProposeMintConfigTxResponse> {
+    return self.makeUnaryCall(
+      path: "/consensus_client.ConsensusClientAPI/ProposeMintConfigTx",
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeProposeMintConfigTxInterceptors() ?? []
+    )
+  }
+
+  //// Propose a new MintTx.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to ProposeMintTx.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func proposeMintTx(
+    _ request: External_MintTx,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<External_MintTx, ConsensusClient_ProposeMintTxResponse> {
+    return self.makeUnaryCall(
+      path: "/consensus_client.ConsensusClientAPI/ProposeMintTx",
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeProposeMintTxInterceptors() ?? []
+    )
+  }
+
+  //// Get current node configuration.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to GetNodeConfig.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func getNodeConfig(
+    _ request: SwiftProtobuf.Google_Protobuf_Empty,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<SwiftProtobuf.Google_Protobuf_Empty, ConsensusConfig_ConsensusNodeConfig> {
+    return self.makeUnaryCall(
+      path: "/consensus_client.ConsensusClientAPI/GetNodeConfig",
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeGetNodeConfigInterceptors() ?? []
+    )
+  }
 }
 
 public protocol ConsensusClient_ConsensusClientAPIClientInterceptorFactoryProtocol {
 
   /// - Returns: Interceptors to use when invoking 'clientTxPropose'.
   func makeClientTxProposeInterceptors() -> [ClientInterceptor<Attest_Message, ConsensusCommon_ProposeTxResponse>]
+
+  /// - Returns: Interceptors to use when invoking 'proposeMintConfigTx'.
+  func makeProposeMintConfigTxInterceptors() -> [ClientInterceptor<External_MintConfigTx, ConsensusClient_ProposeMintConfigTxResponse>]
+
+  /// - Returns: Interceptors to use when invoking 'proposeMintTx'.
+  func makeProposeMintTxInterceptors() -> [ClientInterceptor<External_MintTx, ConsensusClient_ProposeMintTxResponse>]
+
+  /// - Returns: Interceptors to use when invoking 'getNodeConfig'.
+  func makeGetNodeConfigInterceptors() -> [ClientInterceptor<SwiftProtobuf.Google_Protobuf_Empty, ConsensusConfig_ConsensusNodeConfig>]
 }
 
 public final class ConsensusClient_ConsensusClientAPIClient: ConsensusClient_ConsensusClientAPIClientProtocol {
