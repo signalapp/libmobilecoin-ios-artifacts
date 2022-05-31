@@ -38,6 +38,7 @@ COPY Vendor/mobilecoin/attest/api/proto/attest.proto \
     Vendor/mobilecoin/attest/api/proto/
 COPY Vendor/mobilecoin/consensus/api/proto/consensus_client.proto \
     Vendor/mobilecoin/consensus/api/proto/consensus_common.proto \
+    Vendor/mobilecoin/consensus/api/proto/consensus_config.proto \
     Vendor/mobilecoin/consensus/api/proto/
 COPY Vendor/mobilecoin/fog/report/api/proto/report.proto \
     Vendor/mobilecoin/fog/report/api/proto/
@@ -65,6 +66,7 @@ RUN protoc \
     attest.proto \
     consensus_client.proto \
     consensus_common.proto \
+    consensus_config.proto \
     report.proto \
     fog_common.proto \
     kex_rng.proto \
