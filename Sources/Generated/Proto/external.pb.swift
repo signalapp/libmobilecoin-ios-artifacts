@@ -546,6 +546,37 @@ public struct External_TxIn {
   /// Proof that each TxOut in `ring` is in the ledger.
   public var proofs: [External_TxOutMembershipProof] = []
 
+  /// Any rules specified by the signed input
+  public var inputRules: External_InputRules {
+    get {return _inputRules ?? External_InputRules()}
+    set {_inputRules = newValue}
+  }
+  /// Returns true if `inputRules` has been explicitly set.
+  public var hasInputRules: Bool {return self._inputRules != nil}
+  /// Clears the value of `inputRules`. Subsequent reads from it will return its default value.
+  public mutating func clearInputRules() {self._inputRules = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _inputRules: External_InputRules? = nil
+}
+
+/// Rules enforced on a transaction by a signed input within it (MCIP #31)
+public struct External_InputRules {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Outputs required to appear in the TxPrefix for the Tx to be valid
+  public var requiredOutputs: [External_TxOut] = []
+
+  /// A maximum value which the tombstone block for the Tx cannot exceed
+  ///
+  /// A value of zero here means no limit is enforced
+  public var maxTombstoneBlock: UInt64 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -569,7 +600,7 @@ public struct External_TxPrefix {
   /// The block index at which this transaction is no longer valid.
   public var tombstoneBlock: UInt64 = 0
 
-  /// Token id for the fee for this transaction
+  /// Token id for the fee of this transaction
   public var feeTokenID: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -577,11 +608,14 @@ public struct External_TxPrefix {
   public init() {}
 }
 
+/// A ring mlsag is a group-ring signature conferring spending authority of one TxOut
+/// which is part of a TxIn.
 public struct External_RingMLSAG {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// The initial challenge value for the ring signature
   public var cZero: External_CurveScalar {
     get {return _cZero ?? External_CurveScalar()}
     set {_cZero = newValue}
@@ -591,8 +625,13 @@ public struct External_RingMLSAG {
   /// Clears the value of `cZero`. Subsequent reads from it will return its default value.
   public mutating func clearCZero() {self._cZero = nil}
 
+  /// The "responses", one for each input which is signed
   public var responses: [External_CurveScalar] = []
 
+  /// The key image is a hash unique to the "true" spent input. This cannot
+  /// be linked back to determine the true spent input, but the input cannot be
+  /// spent again without producing the same key image value, so this is used to
+  /// prevent double-spends.
   public var keyImage: External_KeyImage {
     get {return _keyImage ?? External_KeyImage()}
     set {_keyImage = newValue}
@@ -615,11 +654,35 @@ public struct External_SignatureRctBulletproofs {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// A ring-signature, one for each TxIn, producing one pseudo-output and key image.
   public var ringSignatures: [External_RingMLSAG] = []
 
+  /// The amount commitments for each pseudo-output.
+  /// There must be one of these for each TxIn.
   public var pseudoOutputCommitments: [External_CompressedRistretto] = []
 
-  public var rangeProofs: Data = Data()
+  /// Before mixed transactions feature, there is one range proof for all pseudo-output
+  /// and output commitments, whose serialized bytes appear here.
+  /// After mixed transactions feature, this field is empty.
+  public var rangeProofBytes: Data = Data()
+
+  /// Before mixed transactions feature, this field is empty.
+  /// After mixed transactions feature, this field contains one range proof for each
+  /// token id which appears in the transaction, in sorted order of token ids.
+  /// It range-proofs the pseudo-outputs and outputs with that token id, in the order
+  /// that they appear in the transaction.
+  public var rangeProofs: [Data] = []
+
+  /// The token ids of each pseudo ouptut. There must be one of these for each TxIn.
+  /// Before mixed transactions feature, this field is empty, and the token ids of
+  /// all pseudo-outputs are inferred from the tx.prefix.fee_token_id.
+  public var pseudoOutputTokenIds: [UInt64] = []
+
+  /// The token ids of each output. There must be one of these for each output of the Tx.
+  /// (tx.prefix.outputs).
+  /// Before mixed transactions feature, this field is empty, and the token ids of
+  /// all outputs are inferred from the tx.prefix.fee_token_id.
+  public var outputTokenIds: [UInt64] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -975,6 +1038,90 @@ public struct External_ValidatedMintConfigTx {
   fileprivate var _signerSet: External_Ed25519SignerSet? = nil
 }
 
+/// The amount and blinding factor of a TxOut
+public struct External_UnmaskedAmount {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The value of the amount commitment
+  public var value: UInt64 = 0
+
+  /// The token_id of the amount commitment
+  public var tokenID: UInt64 = 0
+
+  /// The blinding factor of the amount commitment
+  public var blinding: External_CurveScalar {
+    get {return _blinding ?? External_CurveScalar()}
+    set {_blinding = newValue}
+  }
+  /// Returns true if `blinding` has been explicitly set.
+  public var hasBlinding: Bool {return self._blinding != nil}
+  /// Clears the value of `blinding`. Subsequent reads from it will return its default value.
+  public mutating func clearBlinding() {self._blinding = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _blinding: External_CurveScalar? = nil
+}
+
+/// A pre-signed transaction input with associated rules, as described in MCIP #31
+public struct External_SignedContingentInput {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The block version rules used when making this signature
+  public var blockVersion: UInt32 = 0
+
+  /// The tx_in which was signed
+  public var txIn: External_TxIn {
+    get {return _txIn ?? External_TxIn()}
+    set {_txIn = newValue}
+  }
+  /// Returns true if `txIn` has been explicitly set.
+  public var hasTxIn: Bool {return self._txIn != nil}
+  /// Clears the value of `txIn`. Subsequent reads from it will return its default value.
+  public mutating func clearTxIn() {self._txIn = nil}
+
+  /// The Ring MLSAG signature, conferring spending authority
+  public var mlsag: External_RingMLSAG {
+    get {return _mlsag ?? External_RingMLSAG()}
+    set {_mlsag = newValue}
+  }
+  /// Returns true if `mlsag` has been explicitly set.
+  public var hasMlsag: Bool {return self._mlsag != nil}
+  /// Clears the value of `mlsag`. Subsequent reads from it will return its default value.
+  public mutating func clearMlsag() {self._mlsag = nil}
+
+  /// The amount and blinding of the pseudo-output of the MLSAG
+  public var pseudoOutputAmount: External_UnmaskedAmount {
+    get {return _pseudoOutputAmount ?? External_UnmaskedAmount()}
+    set {_pseudoOutputAmount = newValue}
+  }
+  /// Returns true if `pseudoOutputAmount` has been explicitly set.
+  public var hasPseudoOutputAmount: Bool {return self._pseudoOutputAmount != nil}
+  /// Clears the value of `pseudoOutputAmount`. Subsequent reads from it will return its default value.
+  public mutating func clearPseudoOutputAmount() {self._pseudoOutputAmount = nil}
+
+  //// The amount and blinding of any TxOut required by the input rules
+  public var requiredOutputAmounts: [External_UnmaskedAmount] = []
+
+  //// The tx_out global index of each ring member
+  //// This helps the recipient of this payload construct proofs of membership for the ring
+  public var txOutGlobalIndices: [UInt64] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _txIn: External_TxIn? = nil
+  fileprivate var _mlsag: External_RingMLSAG? = nil
+  fileprivate var _pseudoOutputAmount: External_UnmaskedAmount? = nil
+}
+
 #if swift(>=5.5) && canImport(_Concurrency)
 extension External_KnownTokenId: @unchecked Sendable {}
 extension External_RistrettoPrivate: @unchecked Sendable {}
@@ -999,6 +1146,7 @@ extension External_EncryptedFogHint: @unchecked Sendable {}
 extension External_EncryptedMemo: @unchecked Sendable {}
 extension External_TxOut: @unchecked Sendable {}
 extension External_TxIn: @unchecked Sendable {}
+extension External_InputRules: @unchecked Sendable {}
 extension External_TxPrefix: @unchecked Sendable {}
 extension External_RingMLSAG: @unchecked Sendable {}
 extension External_SignatureRctBulletproofs: @unchecked Sendable {}
@@ -1013,6 +1161,8 @@ extension External_MintConfig: @unchecked Sendable {}
 extension External_MintConfigTxPrefix: @unchecked Sendable {}
 extension External_MintConfigTx: @unchecked Sendable {}
 extension External_ValidatedMintConfigTx: @unchecked Sendable {}
+extension External_UnmaskedAmount: @unchecked Sendable {}
+extension External_SignedContingentInput: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -1858,6 +2008,7 @@ extension External_TxIn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "ring"),
     2: .same(proto: "proofs"),
+    3: .standard(proto: "input_rules"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1868,24 +2019,71 @@ extension External_TxIn: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.ring) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.proofs) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._inputRules) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.ring.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.ring, fieldNumber: 1)
     }
     if !self.proofs.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.proofs, fieldNumber: 2)
     }
+    try { if let v = self._inputRules {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: External_TxIn, rhs: External_TxIn) -> Bool {
     if lhs.ring != rhs.ring {return false}
     if lhs.proofs != rhs.proofs {return false}
+    if lhs._inputRules != rhs._inputRules {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension External_InputRules: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".InputRules"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "required_outputs"),
+    2: .standard(proto: "max_tombstone_block"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.requiredOutputs) }()
+      case 2: try { try decoder.decodeSingularFixed64Field(value: &self.maxTombstoneBlock) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.requiredOutputs.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.requiredOutputs, fieldNumber: 1)
+    }
+    if self.maxTombstoneBlock != 0 {
+      try visitor.visitSingularFixed64Field(value: self.maxTombstoneBlock, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_InputRules, rhs: External_InputRules) -> Bool {
+    if lhs.requiredOutputs != rhs.requiredOutputs {return false}
+    if lhs.maxTombstoneBlock != rhs.maxTombstoneBlock {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2000,7 +2198,10 @@ extension External_SignatureRctBulletproofs: SwiftProtobuf.Message, SwiftProtobu
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "ring_signatures"),
     2: .standard(proto: "pseudo_output_commitments"),
-    3: .standard(proto: "range_proofs"),
+    3: .standard(proto: "range_proof_bytes"),
+    4: .standard(proto: "range_proofs"),
+    5: .standard(proto: "pseudo_output_token_ids"),
+    6: .standard(proto: "output_token_ids"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2011,7 +2212,10 @@ extension External_SignatureRctBulletproofs: SwiftProtobuf.Message, SwiftProtobu
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.ringSignatures) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.pseudoOutputCommitments) }()
-      case 3: try { try decoder.decodeSingularBytesField(value: &self.rangeProofs) }()
+      case 3: try { try decoder.decodeSingularBytesField(value: &self.rangeProofBytes) }()
+      case 4: try { try decoder.decodeRepeatedBytesField(value: &self.rangeProofs) }()
+      case 5: try { try decoder.decodeRepeatedFixed64Field(value: &self.pseudoOutputTokenIds) }()
+      case 6: try { try decoder.decodeRepeatedFixed64Field(value: &self.outputTokenIds) }()
       default: break
       }
     }
@@ -2024,8 +2228,17 @@ extension External_SignatureRctBulletproofs: SwiftProtobuf.Message, SwiftProtobu
     if !self.pseudoOutputCommitments.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.pseudoOutputCommitments, fieldNumber: 2)
     }
+    if !self.rangeProofBytes.isEmpty {
+      try visitor.visitSingularBytesField(value: self.rangeProofBytes, fieldNumber: 3)
+    }
     if !self.rangeProofs.isEmpty {
-      try visitor.visitSingularBytesField(value: self.rangeProofs, fieldNumber: 3)
+      try visitor.visitRepeatedBytesField(value: self.rangeProofs, fieldNumber: 4)
+    }
+    if !self.pseudoOutputTokenIds.isEmpty {
+      try visitor.visitPackedFixed64Field(value: self.pseudoOutputTokenIds, fieldNumber: 5)
+    }
+    if !self.outputTokenIds.isEmpty {
+      try visitor.visitPackedFixed64Field(value: self.outputTokenIds, fieldNumber: 6)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -2033,7 +2246,10 @@ extension External_SignatureRctBulletproofs: SwiftProtobuf.Message, SwiftProtobu
   public static func ==(lhs: External_SignatureRctBulletproofs, rhs: External_SignatureRctBulletproofs) -> Bool {
     if lhs.ringSignatures != rhs.ringSignatures {return false}
     if lhs.pseudoOutputCommitments != rhs.pseudoOutputCommitments {return false}
+    if lhs.rangeProofBytes != rhs.rangeProofBytes {return false}
     if lhs.rangeProofs != rhs.rangeProofs {return false}
+    if lhs.pseudoOutputTokenIds != rhs.pseudoOutputTokenIds {return false}
+    if lhs.outputTokenIds != rhs.outputTokenIds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2538,6 +2754,120 @@ extension External_ValidatedMintConfigTx: SwiftProtobuf.Message, SwiftProtobuf._
   public static func ==(lhs: External_ValidatedMintConfigTx, rhs: External_ValidatedMintConfigTx) -> Bool {
     if lhs._mintConfigTx != rhs._mintConfigTx {return false}
     if lhs._signerSet != rhs._signerSet {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension External_UnmaskedAmount: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UnmaskedAmount"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "value"),
+    2: .standard(proto: "token_id"),
+    3: .same(proto: "blinding"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularFixed64Field(value: &self.value) }()
+      case 2: try { try decoder.decodeSingularFixed64Field(value: &self.tokenID) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._blinding) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.value != 0 {
+      try visitor.visitSingularFixed64Field(value: self.value, fieldNumber: 1)
+    }
+    if self.tokenID != 0 {
+      try visitor.visitSingularFixed64Field(value: self.tokenID, fieldNumber: 2)
+    }
+    try { if let v = self._blinding {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_UnmaskedAmount, rhs: External_UnmaskedAmount) -> Bool {
+    if lhs.value != rhs.value {return false}
+    if lhs.tokenID != rhs.tokenID {return false}
+    if lhs._blinding != rhs._blinding {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension External_SignedContingentInput: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SignedContingentInput"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "block_version"),
+    2: .standard(proto: "tx_in"),
+    3: .same(proto: "mlsag"),
+    4: .standard(proto: "pseudo_output_amount"),
+    5: .standard(proto: "required_output_amounts"),
+    6: .standard(proto: "tx_out_global_indices"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.blockVersion) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._txIn) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._mlsag) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._pseudoOutputAmount) }()
+      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.requiredOutputAmounts) }()
+      case 6: try { try decoder.decodeRepeatedFixed64Field(value: &self.txOutGlobalIndices) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.blockVersion != 0 {
+      try visitor.visitSingularUInt32Field(value: self.blockVersion, fieldNumber: 1)
+    }
+    try { if let v = self._txIn {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._mlsag {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try { if let v = self._pseudoOutputAmount {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
+    if !self.requiredOutputAmounts.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.requiredOutputAmounts, fieldNumber: 5)
+    }
+    if !self.txOutGlobalIndices.isEmpty {
+      try visitor.visitPackedFixed64Field(value: self.txOutGlobalIndices, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_SignedContingentInput, rhs: External_SignedContingentInput) -> Bool {
+    if lhs.blockVersion != rhs.blockVersion {return false}
+    if lhs._txIn != rhs._txIn {return false}
+    if lhs._mlsag != rhs._mlsag {return false}
+    if lhs._pseudoOutputAmount != rhs._pseudoOutputAmount {return false}
+    if lhs.requiredOutputAmounts != rhs.requiredOutputAmounts {return false}
+    if lhs.txOutGlobalIndices != rhs.txOutGlobalIndices {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

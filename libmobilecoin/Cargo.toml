@@ -1,0 +1,95 @@
+[package]
+name = "libmobilecoin"
+version = "1.3.0-pre0"
+authors = ["MobileCoin"]
+edition = "2021"
+
+[lib]
+name = "mobilecoin"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[profile.mobile]
+inherits = "release"
+debug = false
+lto = true
+
+[profile.mobile-release]
+inherits = "mobile"
+codegen-units = 1
+
+[dependencies]
+# External dependencies
+aes-gcm = "0.9.4"
+crc = "3.0.0"
+displaydoc = "0.2"
+generic-array = { version = "0.14", features = ["serde", "more_lengths"] }
+libc = "0.2"
+protobuf = "2.27.1"
+rand_core = { version = "0.6", features = ["std"] }
+sha2 = { version = "0.10", default-features = false }
+slip10_ed25519 = "0.1.3"
+tiny-bip39 = "1.0"
+zeroize = "1.5"
+
+# Lock a specific cmake version that plays nicely with iOS. Note that 0.1.45 does not actually do that,
+# but there is an override to a specific commit of a currently-unreleased version in the root Cargo.toml.
+# Once that version is released (presumably as 0.1.46) that override will no longer be necessary.
+# Note: This is not used directly by this crate, but rather is a subdependency
+cmake = "= 0.1.45"
+
+# MobileCoin dependencies
+mc-account-keys = { path = "../Vendor/mobilecoin/account-keys" }
+mc-account-keys-slip10 = { path = "../Vendor/mobilecoin/account-keys/slip10" }
+mc-api = { path = "../Vendor/mobilecoin/api" }
+mc-attest-ake = { path = "../Vendor/mobilecoin/attest/ake" }
+mc-attest-core = { path = "../Vendor/mobilecoin/attest/core" }
+mc-attest-verifier = { path = "../Vendor/mobilecoin/attest/verifier" }
+mc-common = { path = "../Vendor/mobilecoin/common", features = ["std"] }
+mc-crypto-box = { path = "../Vendor/mobilecoin/crypto/box" }
+mc-crypto-keys = { path = "../Vendor/mobilecoin/crypto/keys" }
+mc-crypto-noise = { path = "../Vendor/mobilecoin/crypto/noise" }
+mc-crypto-rand = { path = "../Vendor/mobilecoin/crypto/rand", features = ["std"] }
+mc-crypto-ring-signature-signer = { path = "../Vendor/mobilecoin/crypto/ring-signature/signer", default-features = false }
+mc-crypto-sig = { path = "../Vendor/mobilecoin/crypto/sig" }
+mc-fog-kex-rng = { path = "../Vendor/mobilecoin/fog/kex_rng" }
+mc-fog-report-validation = { path = "../Vendor/mobilecoin/fog/report/validation" }
+mc-transaction-core = { path = "../Vendor/mobilecoin/transaction/core" }
+mc-transaction-std = { path = "../Vendor/mobilecoin/transaction/std" }
+mc-util-ffi = { path = "../Vendor/mobilecoin/util/ffi" }
+mc-util-serial = { path = "../Vendor/mobilecoin/util/serial", features = ["std"] }
+mc-util-uri = { path = "../Vendor/mobilecoin/util/uri" }
+
+[dev-dependencies]
+cbindgen = { version = "0.24" }
+
+[patch.crates-io]
+# Fork and rename to use "OG" dalek-cryptography with latest dependencies.
+bulletproofs-og = { git = "https://github.com/mobilecoinfoundation/bulletproofs.git", rev = "65f8af4ca0bc1cb2fd2148c3259a0a76b155ff3e" }
+
+# This version contains iOS build fixes
+cmake = { git = "https://github.com/alexcrichton/cmake-rs", rev = "5f89f90ee5d7789832963bffdb2dcb5939e6199c" }
+
+# Fix issues with recent nightlies, bump curve25519-dalek version
+curve25519-dalek = { git = "https://github.com/mobilecoinfoundation/curve25519-dalek.git", rev = "8791722e0273762552c9a056eaccb7df6baf44d7" }
+ed25519-dalek = { git = "https://github.com/mobilecoinfoundation/ed25519-dalek.git", rev = "4194e36abc75722e6fba7d552e719448fc38c51f" }
+
+# mbedtls patched to allow certificate verification with a profile
+mbedtls = { git = "https://github.com/mobilecoinfoundation/rust-mbedtls.git", rev = "ac6ee17a31e37311ce7f4fa0649c340e5d85258d" }
+mbedtls-sys-auto = { git = "https://github.com/mobilecoinfoundation/rust-mbedtls.git", rev = "ac6ee17a31e37311ce7f4fa0649c340e5d85258d" }
+
+# Override lmdb-rkv for a necessary bugfix (see https://github.com/mozilla/lmdb-rs/pull/80)
+lmdb-rkv = { git = "https://github.com/mozilla/lmdb-rs", rev = "df1c2f5" }
+
+# Fork and rename to use "OG" dalek-cryptography.
+schnorrkel-og = { git = "https://github.com/mobilecoinfoundation/schnorrkel.git", rev = "5c98ae068ee4652d6df6463b549fbf2d5d132faa" }
+
+# Fixes the following:
+# * Allow enabling `serde/std` without also requiring `serde_cbor/std` to be enabled.
+#   See: https://github.com/pyfisch/cbor/pull/198
+serde_cbor = { git = "https://github.com/mobilecoinofficial/cbor", rev = "4c886a7c1d523aae1ec4aa7386f402cb2f4341b5" }
+
+# Fix issues with recent nightlies, bump curve25519-dalek version
+x25519-dalek = { git = "https://github.com/mobilecoinfoundation/x25519-dalek.git", rev = "c1966b8743d320cd07a54191475e5c0f94b2ea30" }
+
+# Override diesel dependency with our fork, to statically link SQLite.
+diesel = { git = "https://github.com/mobilecoinofficial/diesel", rev = "026f6379715d27c8be48396e5ca9059f4a263198" }
