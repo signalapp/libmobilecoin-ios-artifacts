@@ -32,6 +32,7 @@ WORKDIR /root/project
 COPY Vendor/mobilecoin/api/proto/blockchain.proto \
     Vendor/mobilecoin/api/proto/external.proto \
     Vendor/mobilecoin/api/proto/printable.proto \
+    Vendor/mobilecoin/api/proto/quorum_set.proto \
     Vendor/mobilecoin/api/proto/watcher.proto \
     Vendor/mobilecoin/api/proto/
 COPY Vendor/mobilecoin/attest/api/proto/attest.proto \
@@ -62,6 +63,7 @@ RUN protoc \
     external.proto \
     blockchain.proto \
     printable.proto \
+	quorum_set.proto \
     watcher.proto \
     attest.proto \
     consensus_client.proto \

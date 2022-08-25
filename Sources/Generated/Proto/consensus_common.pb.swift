@@ -64,6 +64,9 @@ public enum ConsensusCommon_ProposeTxResult: SwiftProtobuf.Enum {
   case missingMaskedTokenID // = 43
   case maskedTokenIDNotAllowed // = 44
   case unsortedOutputs // = 45
+  case inputRulesNotAllowed // = 46
+  case inputRuleMissingRequiredOutput // = 47
+  case inputRuleMaxTombstoneBlockExceeded // = 48
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -109,6 +112,9 @@ public enum ConsensusCommon_ProposeTxResult: SwiftProtobuf.Enum {
     case 43: self = .missingMaskedTokenID
     case 44: self = .maskedTokenIDNotAllowed
     case 45: self = .unsortedOutputs
+    case 46: self = .inputRulesNotAllowed
+    case 47: self = .inputRuleMissingRequiredOutput
+    case 48: self = .inputRuleMaxTombstoneBlockExceeded
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -152,6 +158,9 @@ public enum ConsensusCommon_ProposeTxResult: SwiftProtobuf.Enum {
     case .missingMaskedTokenID: return 43
     case .maskedTokenIDNotAllowed: return 44
     case .unsortedOutputs: return 45
+    case .inputRulesNotAllowed: return 46
+    case .inputRuleMissingRequiredOutput: return 47
+    case .inputRuleMaxTombstoneBlockExceeded: return 48
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -200,6 +209,9 @@ extension ConsensusCommon_ProposeTxResult: CaseIterable {
     .missingMaskedTokenID,
     .maskedTokenIDNotAllowed,
     .unsortedOutputs,
+    .inputRulesNotAllowed,
+    .inputRuleMissingRequiredOutput,
+    .inputRuleMaxTombstoneBlockExceeded,
   ]
 }
 
@@ -334,6 +346,9 @@ extension ConsensusCommon_ProposeTxResult: SwiftProtobuf._ProtoNameProviding {
     43: .same(proto: "MissingMaskedTokenId"),
     44: .same(proto: "MaskedTokenIdNotAllowed"),
     45: .same(proto: "UnsortedOutputs"),
+    46: .same(proto: "InputRulesNotAllowed"),
+    47: .same(proto: "InputRuleMissingRequiredOutput"),
+    48: .same(proto: "InputRuleMaxTombstoneBlockExceeded"),
   ]
 }
 

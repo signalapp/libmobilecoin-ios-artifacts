@@ -174,7 +174,7 @@ commands:
           name: Save build artifact libmobilecoin.a cache for target <<parameters.build-target>>
           key: v2-build-artifact-<<parameters.build-target>>-{{ checksum "vendor_mobilecoin.hash" }}
           paths:
-            - ~/project/Vendor/mobilecoin/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release
+            - ~/project/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release
 
   #
   # LibMobileCoin Headers
@@ -194,7 +194,7 @@ commands:
           name: Save build artifact headers cache
           key: v2-build-artifact-headers-{{ checksum "vendor_mobilecoin.hash" }}
           paths:
-            - ~/project/Vendor/mobilecoin/libmobilecoin/out/ios/include
+            - ~/project/libmobilecoin/out/ios/include
 
   #
   # Rustup Toolchain Cache's
@@ -208,7 +208,7 @@ commands:
       - restore_cache:
           name: Restore Rustup cache for target <<parameters.build-target>>
           keys: 
-            - v0-rustup-<<parameters.build-target>>-{{ checksum "Vendor/mobilecoin/libmobilecoin/toolchain-config.env" }}
+            - v0-rustup-<<parameters.build-target>>-{{ checksum "libmobilecoin/toolchain-config.env" }}
 
   save-rustup-cache:
     parameters:
@@ -218,7 +218,7 @@ commands:
     steps:
       - save_cache:
           name: Save Rustup cache for target aarch64-apple-ios-sim
-          key: v0-rustup-<<parameters.build-target>>-{{ checksum "Vendor/mobilecoin/libmobilecoin/toolchain-config.env" }}
+          key: v0-rustup-<<parameters.build-target>>-{{ checksum "libmobilecoin/toolchain-config.env" }}
           paths:
             - ~/.rustup/toolchains
 
@@ -607,7 +607,7 @@ jobs:
       - init-mobilecoin-submodule
       - run:
           name: Make rustup toolchains directory
-          working_directory: Vendor/mobilecoin/libmobilecoin
+          working_directory: libmobilecoin
           command: |
             mkdir -p ~/.rustup/toolchains
       - restore-rustup-cache:
@@ -616,10 +616,9 @@ jobs:
           directory: ~/.rustup/toolchains/ios-<<parameters.build-target>>-nightly-2021-08-01-swift-5-3-2
       - prepare-for-build: { os: macos }
       - run:
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin
           name: Build rustup toolchains for a build target
           command: |
-            cd libmobilecoin
             make setup
             make toolchain_<< parameters.build-target >>
 
@@ -645,15 +644,14 @@ jobs:
       - restore-build-artifact-cache:
           build-target: <<parameters.build-target>>
       - skip-if-cache-file-exists:
-          file: ~/project/Vendor/mobilecoin/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release/libmobilecoin.a
+          file: ~/project/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release/libmobilecoin.a
       - prepare-for-build: { os: macos }
       - restore-rustup-cache:
           build-target: <<parameters.build-target>>
       - run:
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin
           name: Build libmobilecoin static libraries
           command: |
-            cd libmobilecoin
             make setup
             make << parameters.build-target >>
 
@@ -674,7 +672,7 @@ jobs:
       - init-mobilecoin-submodule
       - run:
           name: Make output directories
-          working_directory: Vendor/mobilecoin/libmobilecoin
+          working_directory: libmobilecoin
           command: |
             mkdir -p out/ios/target
 
