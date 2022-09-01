@@ -179,13 +179,18 @@ MC_ATTRIBUTE_NONNULL(1, 2, 3);
 
 /* ==== McTransactionBuilder ==== */
 
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
 McTransactionBuilder* MC_NULLABLE mc_transaction_builder_create(
   uint64_t fee,
   uint64_t token_id,
   uint64_t tombstone_block,
   const McFogResolver* MC_NULLABLE fog_resolver,
   McTxOutMemoBuilder* MC_NONNULL memo_builder,
-  uint32_t block_version
+  uint32_t block_version,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
 )
 MC_ATTRIBUTE_NONNULL(5);
 
@@ -746,6 +751,7 @@ bool mc_memo_decrypt_e_memo_payload(
   McError* MC_NULLABLE * MC_NULLABLE out_error
 )
 MC_ATTRIBUTE_NONNULL(1, 2, 3, 4);
+
 
 #ifdef __cplusplus
 }
