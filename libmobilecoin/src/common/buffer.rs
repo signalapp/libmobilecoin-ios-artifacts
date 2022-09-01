@@ -2,11 +2,7 @@
 
 use super::{FfiTryFrom, TryFromFfi};
 use crate::LibMcError;
-use core::{
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-    slice,
-};
+use core::{convert::TryFrom, marker, ops, slice};
 use libc::{size_t, ssize_t};
 use mc_util_ffi::{FfiMutPtr, FfiRefPtr};
 
@@ -29,7 +25,7 @@ use mc_util_ffi::{FfiMutPtr, FfiRefPtr};
 pub struct McBuffer<'a> {
     buffer: FfiRefPtr<'a, u8>,
     len: size_t,
-    _phantom: PhantomData<&'a [u8]>,
+    _phantom: marker::PhantomData<&'a [u8]>,
 }
 
 impl<'a> McBuffer<'a> {
@@ -70,7 +66,7 @@ impl<'a> McBuffer<'a> {
     }
 }
 
-impl<'a> Deref for McBuffer<'a> {
+impl<'a> ops::Deref for McBuffer<'a> {
     type Target = [u8];
 
     #[inline]
@@ -90,7 +86,7 @@ impl AsRef<[u8]> for McBuffer<'_> {
 pub struct McMutableBuffer<'a> {
     buffer: FfiMutPtr<'a, u8>,
     len: size_t,
-    _phantom: PhantomData<&'a [u8]>,
+    _phantom: marker::PhantomData<&'a [u8]>,
 }
 
 impl<'a> McMutableBuffer<'a> {
@@ -152,7 +148,7 @@ impl<'a> McMutableBuffer<'a> {
     }
 }
 
-impl<'a> Deref for McMutableBuffer<'a> {
+impl<'a> ops::Deref for McMutableBuffer<'a> {
     type Target = [u8];
 
     #[inline]
@@ -161,7 +157,7 @@ impl<'a> Deref for McMutableBuffer<'a> {
     }
 }
 
-impl<'a> DerefMut for McMutableBuffer<'a> {
+impl<'a> ops::DerefMut for McMutableBuffer<'a> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_slice_mut()
@@ -182,63 +178,21 @@ impl AsMut<[u8]> for McMutableBuffer<'_> {
     }
 }
 
-impl<'a> TryFromFfi<&McBuffer<'a>> for &'a [u8; 32] {
+impl<'a, const N: usize> TryFromFfi<&McBuffer<'a>> for &'a [u8; N] {
     type Error = LibMcError;
-
     #[inline]
     fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
-        let src = src.as_slice_of_len(32)?;
+        let src = src.as_slice_of_len(N)?;
         // SAFETY: ok to unwrap because we just checked length
-        Ok(<&[u8; 32]>::try_from(src).unwrap())
+        Ok(<&[u8; N]>::try_from(src).unwrap())
     }
 }
 
-impl<'a> TryFromFfi<&McBuffer<'a>> for [u8; 32] {
+impl<'a, const N: usize> TryFromFfi<&McBuffer<'a>> for [u8; N] {
     type Error = LibMcError;
-
     #[inline]
     fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
-        Ok(*<&'a [u8; 32]>::try_from_ffi(src)?)
-    }
-}
-
-impl<'a> TryFromFfi<&McBuffer<'a>> for &'a [u8; 64] {
-    type Error = LibMcError;
-
-    #[inline]
-    fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
-        let src = src.as_slice_of_len(64)?;
-        // SAFETY: ok to unwrap because we just checked length
-        Ok(<&[u8; 64]>::try_from(src).unwrap())
-    }
-}
-
-impl<'a> TryFromFfi<&McBuffer<'a>> for [u8; 64] {
-    type Error = LibMcError;
-
-    #[inline]
-    fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
-        Ok(*<&'a [u8; 64]>::try_from_ffi(src)?)
-    }
-}
-
-impl<'a> TryFromFfi<&McBuffer<'a>> for &'a [u8; 66] {
-    type Error = LibMcError;
-
-    #[inline]
-    fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
-        let src = src.as_slice_of_len(66)?;
-        // SAFETY: ok to unwrap because we just checked length
-        Ok(<&[u8; 66]>::try_from(src).unwrap())
-    }
-}
-
-impl<'a> TryFromFfi<&McBuffer<'a>> for [u8; 66] {
-    type Error = LibMcError;
-
-    #[inline]
-    fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
-        Ok(*<&'a [u8; 66]>::try_from_ffi(src)?)
+        Ok(*<&'a [u8; N]>::try_from_ffi(src)?)
     }
 }
 

@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.name         = "LibMobileCoin"
-  s.version      = "1.2.2"
+  s.version      = "1.3.0-pre0"
   s.summary      = "A library for communicating with MobileCoin network"
 
   s.author       = "MobileCoin"
@@ -84,7 +84,7 @@ Pod::Spec.new do |s|
     "SWIFT_INCLUDE_PATHS": "$(HEADER_SEARCH_PATHS)",
 
     "LIBMOBILECOIN_LIB_IF_NEEDED": "$(PODS_TARGET_SRCROOT)/Artifacts/target/$(CARGO_BUILD_TARGET)/release/libmobilecoin.a",
-    "OTHER_LDFLAGS": "-u _mc_string_free $(LIBMOBILECOIN_LIB_IF_NEEDED)",
+    "OTHER_LDFLAGS": "-lz -u _mc_string_free $(LIBMOBILECOIN_LIB_IF_NEEDED)",
 
     "CARGO_BUILD_TARGET[sdk=iphonesimulator*][arch=arm64]": "aarch64-apple-ios-sim",
     "CARGO_BUILD_TARGET[sdk=iphonesimulator*][arch=*]": "x86_64-apple-ios",
