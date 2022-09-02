@@ -589,42 +589,6 @@ jobs:
       - print-tool-versions
       - set-git-credentials
       - publish-to-trunk
-
-  build-toolchain:
-    parameters:
-      xcode-version: { type: string, default: *default-xcode-version }
-      build-target:
-        type: string
-        default: "aarch64-apple-ios-sim"
-    executor:
-      name: macos
-      xcode-version: << parameters.xcode-version >>
-    environment:
-      <<: *default-build-environment
-      OPENSSL_BIN: /usr/local/opt/openssl/bin/openssl
-    steps:
-      - checkout
-      - init-mobilecoin-submodule
-      - run:
-          name: Make rustup toolchains directory
-          working_directory: libmobilecoin
-          command: |
-            mkdir -p ~/.rustup/toolchains
-      - restore-rustup-cache:
-          build-target: <<parameters.build-target>>
-      - skip-if-cache-directory-exists:
-          directory: ~/.rustup/toolchains/ios-<<parameters.build-target>>-nightly-2021-08-01-swift-5-3-2
-      - prepare-for-build: { os: macos }
-      - run:
-          working_directory: libmobilecoin
-          name: Build rustup toolchains for a build target
-          command: |
-            make setup
-            make toolchain_<< parameters.build-target >>
-
-      - save-rustup-cache:
-          build-target: <<parameters.build-target>>
-      - save-homebrew-cache 
       
   build-artifacts:
     parameters:
@@ -803,91 +767,49 @@ workflows:
               xcode-version: [*default-xcode-version]
 
       # ios-sim
-      - build-toolchain:
-          name: build-toolchain-m1-ios-sim-xcode-<< matrix.xcode-version >>
-          build-target: "aarch64-apple-ios-sim" 
-          matrix:
-            parameters:
-              xcode-version: [*default-xcode-version]
       - build-artifacts:
           name: build-artifacts-m1-ios-sim-xcode-<< matrix.xcode-version >>
           build-target: "aarch64-apple-ios-sim" 
-          requires: [build-toolchain-m1-ios-sim-xcode-<< matrix.xcode-version >>]
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
 
       # m1-catalyst
-      - build-toolchain:
-          name: build-toolchain-m1-catalyst-xcode-<< matrix.xcode-version >>
-          build-target: "aarch64-apple-ios-macabi" 
-          matrix:
-            parameters:
-              xcode-version: [*default-xcode-version]
       - build-artifacts:
           name: build-artifacts-m1-catalyst-xcode-<< matrix.xcode-version >>
           build-target: "aarch64-apple-ios-macabi" 
-          requires: [build-toolchain-m1-catalyst-xcode-<< matrix.xcode-version >>]
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
 
       # ios-device
-      - build-toolchain:
-          name: build-toolchain-ios-device-xcode-<< matrix.xcode-version >>
-          build-target: "aarch64-apple-ios" 
-          matrix:
-            parameters:
-              xcode-version: [*default-xcode-version]
       - build-artifacts:
           name: build-artifacts-ios-device-xcode-<< matrix.xcode-version >>
           build-target: "aarch64-apple-ios" 
-          requires: [build-toolchain-ios-device-xcode-<< matrix.xcode-version >>]
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
 
       # intel-catalyst
-      - build-toolchain:
-          name: build-toolchain-intel-catalyst-xcode-<< matrix.xcode-version >>
-          build-target: "x86_64-apple-ios-macabi" 
-          matrix:
-            parameters:
-              xcode-version: [*default-xcode-version]
       - build-artifacts:
           name: build-artifacts-intel-catalyst-xcode-<< matrix.xcode-version >>
           build-target: "x86_64-apple-ios-macabi" 
-          requires: [build-toolchain-intel-catalyst-xcode-<< matrix.xcode-version >>]
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
 
       # intel-ios-sim
-      - build-toolchain:
-          name: build-toolchain-intel-ios-sim-xcode-<< matrix.xcode-version >>
-          build-target: "x86_64-apple-ios"
-          matrix:
-            parameters:
-              xcode-version: [*default-xcode-version]
       - build-artifacts:
           name: build-artifacts-intel-ios-sim-xcode-<< matrix.xcode-version >>
           build-target: "x86_64-apple-ios"
-          requires: [build-toolchain-intel-ios-sim-xcode-<< matrix.xcode-version >>]
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
 
       # intel-macos
-      - build-toolchain:
-          name: build-toolchain-intel-macos-xcode-<< matrix.xcode-version >>
-          build-target: "x86_64-apple-darwin"
-          matrix:
-            parameters:
-              xcode-version: [*default-xcode-version]
       - build-artifacts:
           name: build-artifacts-intel-macos-xcode-<< matrix.xcode-version >>
           build-target: "x86_64-apple-darwin"
-          requires: [build-toolchain-intel-macos-xcode-<< matrix.xcode-version >>]
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
