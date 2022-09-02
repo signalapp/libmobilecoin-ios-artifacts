@@ -3,7 +3,7 @@ LIBMOBILECOIN_LIB_DIR = libmobilecoin
 LIBMOBILECOIN_ARTIFACTS_DIR = $(LIBMOBILECOIN_LIB_DIR)/out/ios
 LIBMOBILECOIN_ARTIFACTS_HEADERS = $(LIBMOBILECOIN_LIB_DIR)/out/ios/include
 ARTIFACTS_DIR = Artifacts
-IOS_TARGETS = x86_64-apple-ios aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-ios-macabi x86_64-apple-ios-macabi
+IOS_TARGETS = aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-ios-macabi x86_64-apple-ios x86_64-apple-ios-macabi
 LIBMOBILECOIN_PROFILE = mobile-release
 
 define BINARY_copy
@@ -12,9 +12,6 @@ endef
 
 .PHONY: default
 default: setup build clean-artifacts copy generate
-
-.PHONY: legacy
-legacy: setup build-legacy clean-artifacts copy-legacy generate
 
 .PHONY: setup
 setup:
@@ -32,12 +29,8 @@ unexport CARGO_PROFILE
 build:
 	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE)
 
-.PHONY: build-legacy
-build-legacy:
-	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE) legacy
-
 .PHONY: clean-artifacts
-copy-legacy:
+clean-artifacts:
 	rm -r "$(ARTIFACTS_DIR)" 2>/dev/null || true
 	mkdir -p "$(ARTIFACTS_DIR)"
 
@@ -47,11 +40,6 @@ copy-legacy:
 .PHONY: copy
 copy:
 	$(call BINARY_copy,target)
-	cp -R "$(LIBMOBILECOIN_ARTIFACTS_HEADERS)" "$(ARTIFACTS_DIR)"
-
-.PHONY: copy-legacy
-copy-legacy:
-	$(call BINARY_copy,legacy)
 	cp -R "$(LIBMOBILECOIN_ARTIFACTS_HEADERS)" "$(ARTIFACTS_DIR)"
 
 .PHONY: generate
