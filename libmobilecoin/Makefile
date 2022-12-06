@@ -129,7 +129,7 @@ out/ios/target: $(ALL_ARCHS_IOS)
 
 .PHONY: clean
 clean:
-	@rm -r out 2>/dev/null || true
+	@rm -r target 2>/dev/null || true
 
 ####################################
 ############# Commands #############

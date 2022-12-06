@@ -99,3 +99,9 @@ lint-podspec:
 .PHONY: publish-podspec
 publish-podspec:
 	bundle exec pod trunk push LibMobileCoin.podspec --allow-warnings
+
+.PHONY: clean
+clean:
+	$(MAKE) -C libmobilecoin clean
+	@rm -r $(MOBILECOIN_DIR)/target 2>/dev/null || true
+
