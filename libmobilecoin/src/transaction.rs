@@ -13,22 +13,27 @@ use generic_array::{typenum::U66, GenericArray};
 use mc_account_keys::{AccountKey, PublicAddress, ShortAddressHash};
 use mc_crypto_keys::{CompressedRistrettoPublic, ReprBytes, RistrettoPrivate, RistrettoPublic};
 use mc_crypto_ring_signature_signer::NoKeysRingSigner;
-use mc_fog_report_validation::FogResolver;
+use mc_fog_report_resolver::FogResolver;
+use mc_transaction_builder::{
+    GiftCodeCancellationMemoBuilder,
+    GiftCodeFundingMemoBuilder, GiftCodeSenderMemoBuilder, InputCredentials,
+    MemoBuilder, RTHMemoBuilder, ReservedSubaddresses,
+    TransactionBuilder,
+};
 use mc_transaction_core::{
     get_tx_out_shared_secret,
     onetime_keys::{recover_onetime_private_key, recover_public_subaddress_spend_key},
     ring_signature::KeyImage,
-    tx::{TxOut, TxOutConfirmationNumber, TxOutMembershipProof},
-    Amount, BlockVersion, CompressedCommitment, EncryptedMemo, MaskedAmount, TokenId,
+    tx::{TxOut, TxOutMembershipProof},
+    Amount, BlockVersion, CompressedCommitment, EncryptedMemo, MaskedAmount, MemoPayload, TokenId,
 };
-use mc_transaction_std::{
-    AuthenticatedSenderMemo, AuthenticatedSenderWithPaymentRequestIdMemo, DestinationMemo,
-    GiftCodeCancellationMemo, GiftCodeCancellationMemoBuilder, GiftCodeFundingMemo,
-    GiftCodeFundingMemoBuilder, GiftCodeSenderMemo, GiftCodeSenderMemoBuilder, InputCredentials,
-    MemoBuilder, MemoPayload, RTHMemoBuilder, ReservedSubaddresses, SenderMemoCredential,
-    TransactionBuilder,
+use mc_transaction_extra::{
+    AuthenticatedSenderMemo, AuthenticatedSenderWithPaymentIntentIdMemo,
+    AuthenticatedSenderWithPaymentRequestIdMemo, DestinationMemo,
+    DestinationWithPaymentIntentIdMemo, DestinationWithPaymentRequestIdMemo,
+    GiftCodeCancellationMemo, GiftCodeFundingMemo, GiftCodeSenderMemo,
+    SenderMemoCredential, TxOutConfirmationNumber,
 };
-
 use mc_util_ffi::*;
 
 /* ==== TxOut ==== */
@@ -109,7 +114,7 @@ pub extern "C" fn mc_tx_out_reconstruct_commitment(
 
         let shared_secret = get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
 
-        let (masked_amount, _) = MaskedAmount::reconstruct(
+        let (masked_amount, _) = MaskedAmount::reconstruct_v1(
             tx_out_masked_amount.masked_value,
             &tx_out_masked_amount.masked_token_id,
             &shared_secret,
@@ -120,7 +125,7 @@ pub extern "C" fn mc_tx_out_reconstruct_commitment(
             .as_slice_mut_of_len(RistrettoPublic::size())
             .expect("out_tx_out_commitment length is insufficient");
 
-        out_tx_out_commitment.copy_from_slice(&masked_amount.commitment.to_bytes());
+        out_tx_out_commitment.copy_from_slice(&masked_amount.commitment().to_bytes());
         Ok(())
     })
 }
@@ -236,7 +241,7 @@ pub extern "C" fn mc_tx_out_get_amount(
         let view_private_key = RistrettoPrivate::try_from_ffi(&view_private_key)?;
 
         let shared_secret = get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
-        let (_masked_amount, amount) = MaskedAmount::reconstruct(
+        let (_masked_amount, amount) = MaskedAmount::reconstruct_v1(
             tx_out_masked_amount.masked_value,
             &tx_out_masked_amount.masked_token_id,
             &shared_secret,
@@ -729,6 +734,27 @@ pub extern "C" fn mc_memo_builder_sender_payment_request_and_destination_create(
     })
 }
 
+/// # Preconditions
+///
+/// * `account_key` - must be a valid `AccountKey` with `fog_info`.
+#[no_mangle]
+pub extern "C" fn mc_memo_builder_sender_payment_intent_and_destination_create(
+    payment_intent_id: u64,
+    account_key: FfiRefPtr<McAccountKey>,
+) -> FfiOptOwnedPtr<McTxOutMemoBuilder> {
+    ffi_boundary(|| {
+        let account_key = AccountKey::try_from_ffi(&account_key).expect("account_key is invalid");
+        let mut rth_memo_builder: RTHMemoBuilder = RTHMemoBuilder::default();
+        rth_memo_builder.set_sender_credential(SenderMemoCredential::from(&account_key));
+        rth_memo_builder.set_payment_intent_id(payment_intent_id);
+        rth_memo_builder.enable_destination_memo();
+
+        let memo_builder_box: Box<dyn MemoBuilder + Sync + Send> = Box::new(rth_memo_builder);
+
+        Some(memo_builder_box)
+    })
+}
+
 #[no_mangle]
 pub extern "C" fn mc_memo_builder_default_create() -> FfiOptOwnedPtr<McTxOutMemoBuilder> {
     ffi_boundary(|| {
@@ -1042,6 +1068,393 @@ pub extern "C" fn mc_memo_destination_memo_get_total_outlay(
 }
 
 /********************************************************************
+ * DestinationWithPaymentIntentIdMemo
+ */
+
+/// # Preconditions
+///
+/// * `destination_public_address` - must be a valid 32-byte Ristretto-format
+///   scalar.
+/// * `number_of_recipients` - must be > 0
+/// * `out_memo_data` - length must be >= 64.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_intent_memo_create(
+    destination_public_address: FfiRefPtr<McPublicAddress>,
+    number_of_recipients: u8,
+    fee: u64,
+    total_outlay: u64,
+    payment_intent_id: u64,
+    out_memo_data: FfiMutPtr<McMutableBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let destination_public_address = PublicAddress::try_from_ffi(&destination_public_address)
+            .expect("destination_public_address is invalid");
+
+        let mut memo = DestinationWithPaymentIntentIdMemo::new(
+            ShortAddressHash::from(&destination_public_address),
+            total_outlay,
+            fee,
+            payment_intent_id,
+        )
+        .unwrap();
+
+        memo.set_num_recipients(number_of_recipients);
+
+        let memo_bytes: [u8; 64] = memo.clone().into();
+
+        let out_memo_data = out_memo_data
+            .into_mut()
+            .as_slice_mut_of_len(core::mem::size_of_val(&memo_bytes))
+            .expect("out_memo_data length is insufficient");
+
+        out_memo_data.copy_from_slice(&memo_bytes);
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+/// * `out_short_address_hash` - length must be >= 16 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_intent_memo_get_address_hash(
+    destination_with_payment_intent_memo_data: FfiRefPtr<McBuffer>,
+    out_short_address_hash: FfiMutPtr<McMutableBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_intent_memo_data)
+            .expect("destination_with_payment_intent_memo_data invalid length");
+
+        let destination_with_payment_intent_memo: DestinationWithPaymentIntentIdMemo = DestinationWithPaymentIntentIdMemo::from(&memo_data);
+
+        let short_address_hash: &ShortAddressHash = destination_with_payment_intent_memo.get_address_hash();
+
+        let hash_data: [u8; 16] = <[u8; 16]>::from(short_address_hash.clone());
+
+        let out_short_address_hash = out_short_address_hash
+            .into_mut()
+            .as_slice_mut_of_len(core::mem::size_of_val(&hash_data))
+            .expect("ShortAddressHash length is insufficient");
+
+        out_short_address_hash.copy_from_slice(&hash_data);
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_intent_memo_get_number_of_recipients(
+    destination_with_payment_intent_memo_data: FfiRefPtr<McBuffer>,
+    out_number_of_recipients: FfiMutPtr<u8>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_intent_memo_data)
+            .expect("destination_with_payment_intent_memo_data invalid length");
+
+        let destination_with_payment_intent_memo: DestinationWithPaymentIntentIdMemo = DestinationWithPaymentIntentIdMemo::from(&memo_data);
+
+        let number_of_recipients: u8 = destination_with_payment_intent_memo.get_num_recipients();
+
+        *out_number_of_recipients.into_mut() = number_of_recipients;
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_intent_memo_get_fee(
+    destination_with_payment_intent_memo_data: FfiRefPtr<McBuffer>,
+    out_fee: FfiMutPtr<u64>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_intent_memo_data)
+            .expect("destination_with_payment_intent_memo_data invalid length");
+
+        let destination_with_payment_intent_memo: DestinationWithPaymentIntentIdMemo = DestinationWithPaymentIntentIdMemo::from(&memo_data);
+
+        let fee: u64 = destination_with_payment_intent_memo.get_fee();
+
+        *out_fee.into_mut() = fee;
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_intent_memo_get_total_outlay(
+    destination_with_payment_intent_memo_data: FfiRefPtr<McBuffer>,
+    out_total_outlay: FfiMutPtr<u64>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_intent_memo_data)
+            .expect("destination_with_payment_intent_memo_data invalid length");
+
+        let destination_with_payment_intent_memo: DestinationWithPaymentIntentIdMemo = DestinationWithPaymentIntentIdMemo::from(&memo_data);
+
+        let total_outlay: u64 = destination_with_payment_intent_memo.get_total_outlay();
+
+        *out_total_outlay.into_mut() = total_outlay;
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_intent_memo_get_payment_intent_id(
+    destination_with_payment_intent_memo_data: FfiRefPtr<McBuffer>,
+    out_payment_intent_id: FfiMutPtr<u64>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_intent_memo_data)
+            .expect("destination_with_payment_intent_memo_data invalid length");
+
+        let destination_with_payment_intent_memo: DestinationWithPaymentIntentIdMemo = DestinationWithPaymentIntentIdMemo::from(&memo_data);
+
+        let payment_intent_id: u64 = destination_with_payment_intent_memo.get_payment_intent_id();
+
+        *out_payment_intent_id.into_mut() = payment_intent_id;
+
+        Ok(())
+    })
+}
+
+/********************************************************************
+ * DestinationWithPaymentRequestIdMemo
+ */
+
+/// # Preconditions
+///
+/// * `destination_public_address` - must be a valid 32-byte Ristretto-format
+///   scalar.
+/// * `number_of_recipients` - must be > 0
+/// * `out_memo_data` - length must be >= 64.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_request_memo_create(
+    destination_public_address: FfiRefPtr<McPublicAddress>,
+    number_of_recipients: u8,
+    fee: u64,
+    total_outlay: u64,
+    payment_request_id: u64,
+    out_memo_data: FfiMutPtr<McMutableBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let destination_public_address = PublicAddress::try_from_ffi(&destination_public_address)
+            .expect("destination_public_address is invalid");
+
+        let mut memo = DestinationWithPaymentRequestIdMemo::new(
+            ShortAddressHash::from(&destination_public_address),
+            total_outlay,
+            fee,
+            payment_request_id,
+        )
+        .unwrap();
+
+        memo.set_num_recipients(number_of_recipients);
+
+        let memo_bytes: [u8; 64] = memo.clone().into();
+
+        let out_memo_data = out_memo_data
+            .into_mut()
+            .as_slice_mut_of_len(core::mem::size_of_val(&memo_bytes))
+            .expect("out_memo_data length is insufficient");
+
+        out_memo_data.copy_from_slice(&memo_bytes);
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+/// * `out_short_address_hash` - length must be >= 16 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_request_memo_get_address_hash(
+    destination_with_payment_request_memo_data: FfiRefPtr<McBuffer>,
+    out_short_address_hash: FfiMutPtr<McMutableBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_request_memo_data)
+            .expect("destination_with_payment_request_memo_data invalid length");
+
+        let destination_with_payment_request_memo: DestinationWithPaymentRequestIdMemo = DestinationWithPaymentRequestIdMemo::from(&memo_data);
+
+        let short_address_hash: &ShortAddressHash = destination_with_payment_request_memo.get_address_hash();
+
+        let hash_data: [u8; 16] = <[u8; 16]>::from(short_address_hash.clone());
+
+        let out_short_address_hash = out_short_address_hash
+            .into_mut()
+            .as_slice_mut_of_len(core::mem::size_of_val(&hash_data))
+            .expect("ShortAddressHash length is insufficient");
+
+        out_short_address_hash.copy_from_slice(&hash_data);
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_request_memo_get_number_of_recipients(
+    destination_with_payment_request_memo_data: FfiRefPtr<McBuffer>,
+    out_number_of_recipients: FfiMutPtr<u8>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_request_memo_data)
+            .expect("destination_with_payment_request_memo_data invalid length");
+
+        let destination_with_payment_request_memo: DestinationWithPaymentRequestIdMemo = DestinationWithPaymentRequestIdMemo::from(&memo_data);
+
+        let number_of_recipients: u8 = destination_with_payment_request_memo.get_num_recipients();
+
+        *out_number_of_recipients.into_mut() = number_of_recipients;
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_request_memo_get_fee(
+    destination_with_payment_request_memo_data: FfiRefPtr<McBuffer>,
+    out_fee: FfiMutPtr<u64>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_request_memo_data)
+            .expect("destination_with_payment_request_memo_data invalid length");
+
+        let destination_with_payment_request_memo: DestinationWithPaymentRequestIdMemo = DestinationWithPaymentRequestIdMemo::from(&memo_data);
+
+        let fee: u64 = destination_with_payment_request_memo.get_fee();
+
+        *out_fee.into_mut() = fee;
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_request_memo_get_total_outlay(
+    destination_with_payment_request_memo_data: FfiRefPtr<McBuffer>,
+    out_total_outlay: FfiMutPtr<u64>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_request_memo_data)
+            .expect("destination_with_payment_request_memo_data invalid length");
+
+        let destination_with_payment_request_memo: DestinationWithPaymentRequestIdMemo = DestinationWithPaymentRequestIdMemo::from(&memo_data);
+
+        let total_outlay: u64 = destination_with_payment_request_memo.get_total_outlay();
+
+        *out_total_outlay.into_mut() = total_outlay;
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_destination_with_payment_request_memo_get_payment_request_id(
+    destination_with_payment_request_memo_data: FfiRefPtr<McBuffer>,
+    out_payment_request_id: FfiMutPtr<u64>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&destination_with_payment_request_memo_data)
+            .expect("destination_with_payment_request_memo_data invalid length");
+
+        let destination_with_payment_request_memo: DestinationWithPaymentRequestIdMemo = DestinationWithPaymentRequestIdMemo::from(&memo_data);
+
+        let payment_request_id: u64 = destination_with_payment_request_memo.get_payment_request_id();
+
+        *out_payment_request_id.into_mut() = payment_request_id;
+
+        Ok(())
+    })
+}
+
+
+/********************************************************************
  * SenderWithPaymentRequestMemo
  */
 
@@ -1203,6 +1616,173 @@ pub extern "C" fn mc_memo_sender_with_payment_request_memo_get_payment_request_i
         let payment_request_id: u64 = sender_with_payment_request_memo.payment_request_id();
 
         *out_payment_request_id.into_mut() = payment_request_id;
+
+        Ok(())
+    })
+}
+
+/********************************************************************
+ * SenderWithPaymentIntentMemo
+ */
+
+/// # Preconditions
+///
+/// * `sender_with_payment_intent_memo_data` - must be 64 bytes
+/// * `sender_public_address` - must be a valid `PublicAddress`.
+/// * `receiving_subaddress_view_private_key` - must be a valid 32-byte
+///   Ristretto-format scalar.
+/// * `tx_out_public_key` - must be a valid 32-byte Ristretto-format scalar.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_sender_with_payment_intent_memo_is_valid(
+    sender_with_payment_intent_memo_data: FfiRefPtr<McBuffer>,
+    sender_public_address: FfiRefPtr<McPublicAddress>,
+    receiving_subaddress_view_private_key: FfiRefPtr<McBuffer>,
+    tx_out_public_key: FfiRefPtr<McBuffer>,
+    out_valid: FfiMutPtr<bool>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let sender_public_address = PublicAddress::try_from_ffi(&sender_public_address)
+            .expect("sender_public_address is invalid");
+
+        let receiving_subaddress_view_private_key =
+            RistrettoPrivate::try_from_ffi(&receiving_subaddress_view_private_key)
+                .expect("receiving_subaddress_view_private_key is not a valid RistrettoPrivate");
+
+        let tx_out_public_key_compressed =
+            CompressedRistrettoPublic::try_from_ffi(&tx_out_public_key)
+                .expect("tx_out_public_key is not a valid RistrettoPublic");
+
+        let memo_data = <[u8; 64]>::try_from_ffi(&sender_with_payment_intent_memo_data)
+            .expect("sender_with_payment_intent_memo_data invalid length");
+
+        let authenticated_sender_with_payment_intent_memo: AuthenticatedSenderWithPaymentIntentIdMemo =
+            AuthenticatedSenderWithPaymentIntentIdMemo::from(&memo_data);
+
+        let is_memo_valid = authenticated_sender_with_payment_intent_memo.validate(
+            &sender_public_address,
+            &receiving_subaddress_view_private_key,
+            &tx_out_public_key_compressed,
+        );
+
+        *out_valid.into_mut() = bool::from(is_memo_valid);
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `sender_account_key` - must be a valid account key
+/// * `recipient_subaddress_view_public_key` - must be a valid 32-byte
+///   Ristretto-format scalar.
+/// * `tx_out_public_key` - must be a valid 32-byte Ristretto-format scalar.
+/// * `out_memo_data` - length must be >= 64.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_sender_with_payment_intent_memo_create(
+    sender_account_key: FfiRefPtr<McAccountKey>,
+    recipient_subaddress_view_public_key: FfiRefPtr<McBuffer>,
+    tx_out_public_key: FfiRefPtr<McBuffer>,
+    payment_intent_id: u64,
+    out_memo_data: FfiMutPtr<McMutableBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let sender_account_key =
+            AccountKey::try_from_ffi(&sender_account_key).expect("account_key is invalid");
+        let recipient_subaddress_view_public_key =
+            RistrettoPublic::try_from_ffi(&recipient_subaddress_view_public_key)?;
+        let tx_out_public_key = CompressedRistrettoPublic::try_from_ffi(&tx_out_public_key)?;
+
+        let sender_cred = SenderMemoCredential::from(&sender_account_key);
+        let memo = AuthenticatedSenderWithPaymentIntentIdMemo::new(
+            &sender_cred,
+            &recipient_subaddress_view_public_key,
+            &tx_out_public_key,
+            payment_intent_id,
+        );
+
+        let memo_bytes: [u8; 64] = memo.into();
+
+        let out_memo_data = out_memo_data
+            .into_mut()
+            .as_slice_mut_of_len(core::mem::size_of_val(&memo_bytes))
+            .expect("out_memo_data length is insufficient");
+
+        out_memo_data.copy_from_slice(&memo_bytes);
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `sender_with_payment_intent_memo_data` - must be 64 bytes
+/// * `out_short_address_hash` - length must be >= 16 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_sender_with_payment_intent_memo_get_address_hash(
+    sender_with_payment_intent_memo_data: FfiRefPtr<McBuffer>,
+    out_short_address_hash: FfiMutPtr<McMutableBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&sender_with_payment_intent_memo_data)
+            .expect("sender_with_payment_intent_memo_data invalid length");
+
+        let authenticated_sender_with_payment_intent_memo: AuthenticatedSenderWithPaymentIntentIdMemo =
+            AuthenticatedSenderWithPaymentIntentIdMemo::from(&memo_data);
+
+        let short_address_hash: ShortAddressHash =
+            authenticated_sender_with_payment_intent_memo.sender_address_hash();
+
+        let hash_data: [u8; 16] = short_address_hash.into();
+
+        let out_short_address_hash = out_short_address_hash
+            .into_mut()
+            .as_slice_mut_of_len(core::mem::size_of_val(&hash_data))
+            .expect("ShortAddressHash length is insufficient");
+
+        out_short_address_hash.copy_from_slice(&hash_data);
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `sender_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_memo_sender_with_payment_intent_memo_get_payment_intent_id(
+    sender_with_payment_intent_memo_data: FfiRefPtr<McBuffer>,
+    out_payment_intent_id: FfiMutPtr<u64>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let memo_data = <[u8; 64]>::try_from_ffi(&sender_with_payment_intent_memo_data)
+            .expect("sender_with_payment_intent_memo_data invalid length");
+
+        let sender_with_payment_intent_memo: AuthenticatedSenderWithPaymentIntentIdMemo =
+            AuthenticatedSenderWithPaymentIntentIdMemo::from(&memo_data);
+
+        let payment_intent_id: u64 = sender_with_payment_intent_memo.payment_intent_id();
+
+        *out_payment_intent_id.into_mut() = payment_intent_id;
 
         Ok(())
     })
