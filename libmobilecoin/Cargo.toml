@@ -37,22 +37,26 @@ cmake = "= 0.1.49"
 
 # MobileCoin dependencies
 mc-account-keys = { path = "../Vendor/mobilecoin/account-keys" }
-mc-account-keys-slip10 = { path = "../Vendor/mobilecoin/account-keys/slip10" }
 mc-api = { path = "../Vendor/mobilecoin/api" }
 mc-attest-ake = { path = "../Vendor/mobilecoin/attest/ake" }
 mc-attest-core = { path = "../Vendor/mobilecoin/attest/core" }
 mc-attest-verifier = { path = "../Vendor/mobilecoin/attest/verifier" }
 mc-common = { path = "../Vendor/mobilecoin/common", features = ["std"] }
+mc-core = { path = "../Vendor/mobilecoin/core" }
 mc-crypto-box = { path = "../Vendor/mobilecoin/crypto/box" }
 mc-crypto-keys = { path = "../Vendor/mobilecoin/crypto/keys" }
 mc-crypto-noise = { path = "../Vendor/mobilecoin/crypto/noise" }
 mc-crypto-rand = { path = "../Vendor/mobilecoin/crypto/rand", features = ["std"] }
 mc-crypto-ring-signature-signer = { path = "../Vendor/mobilecoin/crypto/ring-signature/signer", default-features = false }
 mc-crypto-sig = { path = "../Vendor/mobilecoin/crypto/sig" }
+mc-fog-ingest-report = { path = "../Vendor/mobilecoin/fog/ingest/report" }
 mc-fog-kex-rng = { path = "../Vendor/mobilecoin/fog/kex_rng" }
+mc-fog-report-resolver = { path = "../Vendor/mobilecoin/fog/report/resolver" }
+mc-fog-report-types = { path = "../Vendor/mobilecoin/fog/report/types" }
 mc-fog-report-validation = { path = "../Vendor/mobilecoin/fog/report/validation" }
 mc-transaction-core = { path = "../Vendor/mobilecoin/transaction/core" }
-mc-transaction-std = { path = "../Vendor/mobilecoin/transaction/std" }
+mc-transaction-builder = { path = "../Vendor/mobilecoin/transaction/builder" }
+mc-transaction-extra = { path = "../Vendor/mobilecoin/transaction/extra" }
 mc-util-ffi = { path = "../Vendor/mobilecoin/util/ffi" }
 mc-util-serial = { path = "../Vendor/mobilecoin/util/serial", features = ["std"] }
 mc-util-uri = { path = "../Vendor/mobilecoin/util/uri" }

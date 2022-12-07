@@ -7,9 +7,9 @@ use mc_account_keys::PublicAddress;
 use mc_attest_verifier::Verifier;
 use mc_crypto_keys::{ReprBytes, RistrettoPrivate, RistrettoPublic};
 use mc_fog_kex_rng::{BufferedRng, KexRngPubkey, NewFromKex, StoredRng, VersionedKexRng};
-use mc_fog_report_validation::{
-    FogPubkeyResolver, FogReportResponses, FogResolver, FullyValidatedFogPubkey,
-};
+use mc_fog_report_types::FogReportResponses;
+use mc_fog_report_resolver::FogResolver;
+use mc_fog_report_validation::{FullyValidatedFogPubkey, FogPubkeyResolver};
 use mc_util_ffi::*;
 use mc_util_serial::Message;
 use mc_util_uri::FogUri;
@@ -46,7 +46,7 @@ pub extern "C" fn mc_fog_resolver_get_fog_pubkey(
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
 ) -> FfiOptOwnedPtr<McFullyValidatedFogPubkey> {
     ffi_boundary_with_error(out_error, || {
-        let fog_resolver = FogResolver::new(fog_resolver.0.clone(), &fog_resolver.1)
+        let fog_resolver = FogResolver::new(fog_resolver.0.clone(), &fog_resolver.1.clone())
             .map_err(|err| LibMcError::InvalidInput(err.to_string()))?;
 
         let recipient = PublicAddress::try_from_ffi(&recipient)?;

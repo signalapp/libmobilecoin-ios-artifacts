@@ -315,6 +315,15 @@ McTxOutMemoBuilder* MC_NULLABLE mc_memo_builder_sender_payment_request_and_desti
 )
 MC_ATTRIBUTE_NONNULL(2);
 
+/// # Preconditions
+///
+/// * `account_key` - must be a valid `AccountKey` with `fog_info`.
+McTxOutMemoBuilder* MC_NULLABLE mc_memo_builder_sender_payment_intent_and_destination_create(
+  uint64_t payment_intent_id,
+  const McAccountKey* MC_NONNULL account_key
+)
+MC_ATTRIBUTE_NONNULL(2);
+
 McTxOutMemoBuilder* MC_NULLABLE mc_memo_builder_default_create();
 
 
@@ -461,6 +470,193 @@ bool mc_memo_destination_memo_get_total_outlay(
 )
 MC_ATTRIBUTE_NONNULL(1, 2);
 
+/* ==== DestinationWithPaymentIntentIdMemo ==== */
+
+/// # Preconditions
+///
+/// * `destination_public_address` - must be a valid 32-byte
+///     Ristretto-format scalar.
+/// * `number_of_recipients` - must be > 0
+/// * `out_memo_data` - length must be >= 64.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_intent_memo_create(
+  const McPublicAddress* MC_NONNULL destination_public_address,
+  uint8_t number_of_recipients,
+  uint64_t fee,
+  uint64_t total_outlay,
+  McMutableBuffer* MC_NONNULL out_memo_data,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 5);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+/// * `out_short_address_hash` - length must be >= 16 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_intent_memo_get_address_hash(
+  const McBuffer* MC_NONNULL destination_with_payment_intent_memo_data,
+  McMutableBuffer* MC_NONNULL out_short_address_hash,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_intent_memo_get_number_of_recipients(
+  const McBuffer* MC_NONNULL destination_with_payment_intent_memo_data,
+  uint8_t* MC_NONNULL out_number_of_recipients,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_intent_memo_get_fee(
+  const McBuffer* MC_NONNULL destination_with_payment_intent_memo_data,
+  uint64_t* MC_NONNULL out_fee,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_intent_memo_get_total_outlay(
+  const McBuffer* MC_NONNULL destination_with_payment_intent_memo_data,
+  uint64_t* MC_NONNULL out_total_outlay,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_intent_memo_get_payment_intent_id(
+  const McBuffer* MC_NONNULL destination_with_payment_intent_memo_data,
+  uint64_t* MC_NONNULL out_payment_intent_id,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+
+/* ==== DestinationWithPaymentRequestIdMemo ==== */
+
+/// # Preconditions
+///
+/// * `destination_public_address` - must be a valid 32-byte
+///     Ristretto-format scalar.
+/// * `number_of_recipients` - must be > 0
+/// * `out_memo_data` - length must be >= 64.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_request_memo_create(
+  const McPublicAddress* MC_NONNULL destination_public_address,
+  uint8_t number_of_recipients,
+  uint64_t fee,
+  uint64_t total_outlay,
+  McMutableBuffer* MC_NONNULL out_memo_data,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 5);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+/// * `out_short_address_hash` - length must be >= 16 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_request_memo_get_address_hash(
+  const McBuffer* MC_NONNULL destination_with_payment_request_memo_data,
+  McMutableBuffer* MC_NONNULL out_short_address_hash,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_request_memo_get_number_of_recipients(
+  const McBuffer* MC_NONNULL destination_with_payment_request_memo_data,
+  uint8_t* MC_NONNULL out_number_of_recipients,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_request_memo_get_fee(
+  const McBuffer* MC_NONNULL destination_with_payment_request_memo_data,
+  uint64_t* MC_NONNULL out_fee,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_request_memo_get_total_outlay(
+  const McBuffer* MC_NONNULL destination_with_payment_request_memo_data,
+  uint64_t* MC_NONNULL out_total_outlay,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `destination_with_payment_request_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_destination_with_payment_request_memo_get_payment_request_id(
+  const McBuffer* MC_NONNULL destination_with_payment_request_memo_data,
+  uint64_t* MC_NONNULL out_payment_request_id,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
 
 /* ==== SenderWithPaymentRequestMemo ==== */
 
@@ -532,6 +728,80 @@ MC_ATTRIBUTE_NONNULL(1, 2);
 bool mc_memo_sender_with_payment_request_memo_get_payment_request_id(
   const McBuffer* MC_NONNULL sender_with_payment_request_memo_data,
   uint64_t* MC_NONNULL out_payment_request_id,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/* ==== SenderWithPaymentIntentMemo ==== */
+
+
+/// # Preconditions
+///
+/// * `sender_with_payment_intent_memo_data` - must be 64 bytes
+/// * `sender_public_address` - must be a valid `PublicAddress`.
+/// * `receiving_subaddress_view_private_key` - must be a valid
+///     32-byte Ristretto-format scalar.
+/// * `tx_out_public_key` - must be a valid 32-byte Ristretto-format scalar.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_sender_with_payment_intent_memo_is_valid(
+  const McBuffer* MC_NONNULL sender_with_payment_intent_memo_data,
+  const McPublicAddress* MC_NONNULL sender_public_address,
+  const McBuffer* MC_NONNULL receiving_subaddress_view_private_key,
+  const McBuffer* MC_NONNULL tx_out_public_key,
+  bool* MC_NONNULL out_valid,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2, 3, 4, 5);
+
+/// # Preconditions
+///
+/// * `sender_account_key` - must be a valid account key
+/// * `recipient_subaddress_view_public_key` - must be a valid
+///     32-byte Ristretto-format scalar.
+/// * `tx_out_public_key` - must be a valid 32-byte Ristretto-format scalar.
+/// * `out_memo_data` - length must be >= 64.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_sender_with_payment_intent_memo_create(
+  const McAccountKey* MC_NONNULL sender_account_key,
+  const McBuffer* MC_NONNULL recipient_subaddress_view_public_key,
+  const McBuffer* MC_NONNULL tx_out_public_key,
+  uint64_t payment_intent_id,
+  McMutableBuffer* MC_NONNULL out_memo_data,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2, 3, 5);
+
+/// # Preconditions
+///
+/// * `sender_with_payment_intent_memo_data` - must be 64 bytes
+/// * `out_short_address_hash` - length must be >= 16 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_sender_with_payment_intent_memo_get_address_hash(
+  const McBuffer* MC_NONNULL sender_with_payment_intent_memo_data,
+  McMutableBuffer* MC_NONNULL out_short_address_hash,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `sender_with_payment_intent_memo_data` - must be 64 bytes
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_memo_sender_with_payment_intent_memo_get_payment_intent_id(
+  const McBuffer* MC_NONNULL sender_with_payment_intent_memo_data,
+  uint64_t* MC_NONNULL out_payment_intent_id,
   McError* MC_NULLABLE * MC_NULLABLE out_error
 )
 MC_ATTRIBUTE_NONNULL(1, 2);
