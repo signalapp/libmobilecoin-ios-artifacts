@@ -15,9 +15,15 @@ extern "C" {
 
 /* ==== Types ==== */
 
+enum McMaskedAmountVersion {
+  V1,
+  V2,
+};
+
 typedef struct {
   uint64_t masked_value;
   const McBuffer* MC_NONNULL masked_token_id;
+  enum McMaskedAmountVersion version;
 } McTxOutMaskedAmount;
 
 typedef struct {

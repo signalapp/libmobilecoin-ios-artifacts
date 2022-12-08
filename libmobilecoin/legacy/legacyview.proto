@@ -1,0 +1,78 @@
+// Copyright (c) 2018-2022 The MobileCoin Foundation
+
+syntax = "proto3";
+
+package fog_view;
+
+/// 
+/// *** DISCLAIMER *** 
+///
+/// This proto is deprecated and no longer used, we're re-importing it so we can re-use serialized data in 
+/// some Swift unit tests. Once we convert these tests we should remove this proto.
+/// 
+/// *** END DISCLAIMER *** 
+///
+/// The schema for the decrypted TxOutSearchResult ciphertext
+/// This is the information that the Ingest enclave produces for the user about their TxOut
+///
+/// Note: The fields of FogTxOut are flattened here because it reduces the size of the protobuf
+/// enough to make a difference for the quality of ORAM implementation, like ~10% better memory utilization
+///
+/// Note: Fog TxOutRecord DOES NOT include the encrypted fog hint of the original TxOut, because it is big,
+/// and the client cannot read it anyways. However, when using the TxOut to build transactions, you must have that
+/// or the merkle proofs will fail validation, at least for now.
+/// The fog merkle proof server gives you a TxOut with fog hint, as it appears in blockchain,
+/// and that's the version of the TxOut that you should use when building a transaction.
+message TxOutRecordLegacy {
+    /// The (compressed ristretto) bytes of commitment associated to amount field in the TxOut that was recovered
+    ///
+    /// Note: This field is omitted in recent versions, because it can be reconstructed by the recipient instead.
+    bytes tx_out_amount_commitment_data = 1;
+    /// The masked value associated to amount field in the TxOut that was recovered
+    fixed64 tx_out_amount_masked_value = 2;
+    /// The (compressed ristretto) bytes of the target key associated to the TxOut that was recovered
+    bytes tx_out_target_key_data = 3;
+    /// The (compressed ristretto) bytes of the public key associated to the TxOut that was recovered
+    bytes tx_out_public_key_data = 4;
+    /// The global index of this TxOut in the set of all TxOuts in the entire block chain
+    fixed64 tx_out_global_index = 5;
+    /// The index of the block index in which this TxOut appeared
+    fixed64 block_index = 6;
+    /// The timestamp of the block containing this output.
+    /// Some blocks, like the origin block, don't have a timestamp, and this value is u64::MAX
+    /// Other blocks are expected to have timestamps.
+    ///
+    /// Note: The timestamp is based on untrusted reporting of time from ONE of the consensus validators.
+    /// Because it is a distributed system, it may not be the SAME consensus validator from block to block,
+    /// and the timestamps may not make even a minimal amount of sense when the validator differs.
+    ///
+    /// These timestamps are
+    /// - NOISY, forward and backwards in time, depending on system time settings of many different servers.
+    /// - NOT MONOTONIC: it's possible that you get a timestamp for block 101 that is before the timestamp for block 100.
+    /// - Not even CONSISTENT across fog services: It's possible you get a different timestamp for a TxOut in block 100,
+    ///   than you do for a key image in block 100 from the key image endpoint.
+    ///   This is unavoidable right now because it is possible that fog-ingest has different levels of
+    ///   connectivity from the fog-key-image service to the blockchain data sources.
+    ///
+    /// Timestamps are BEST-EFFORT and for a good user experience, the client software should attempt to reconcile these
+    /// timestamps, so that events that have a happens-before relationship in the system, have timestamps that reflect that.
+    /// Otherwise, we should expect users to be confused and disturbed about the occasional time-travelling transaction.
+    ///
+    /// We hope to improve the quality guarantees of these timestamps over time, but for now this is the best we
+    /// can do until some changes can be made to the consensus network and other services related to timestamps.
+    ///
+    /// Represented as seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.
+    fixed64 timestamp = 7;
+    /// The crc32 of the commitment data bytes.
+    /// This is a 4-byte IEEE crc32 of the bytes of the tx_out_amount_commitment_data bytes, which is present if
+    /// the full tx_out_amount_commitment_data is omitted.
+    /// The client can recompute the tx_out_amount_commitment from the other data that we include.
+    /// They can confirm correct recomputation by checking this crc value.
+    fixed32 tx_out_amount_commitment_data_crc32 = 8;
+    /// The bytes of the encrypted memo.
+    /// This exactly 66 bytes when present.
+    /// This is omitted for TxOut's from before the upgrade that introduced memos.
+    bytes tx_out_e_memo_data = 9;
+    /// The masked token id associated to the amount field in the TxOut that was recovered
+    bytes tx_out_amount_masked_token_id = 10;
+}

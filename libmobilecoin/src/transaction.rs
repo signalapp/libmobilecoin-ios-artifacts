@@ -39,6 +39,12 @@ use mc_util_ffi::*;
 /* ==== TxOut ==== */
 
 #[repr(C)]
+pub enum McMaskedAmountVersion {
+    V1 = 0,
+    V2 = 1,
+}
+
+#[repr(C)]
 pub struct McTxOutMaskedAmount<'a> {
     /// 32-byte `CompressedCommitment`
     masked_value: u64,
@@ -47,6 +53,8 @@ pub struct McTxOutMaskedAmount<'a> {
     /// shared_secret)` 8 bytes long when used, 0 bytes for older amounts
     /// that don't have this.
     masked_token_id: FfiRefPtr<'a, McBuffer<'a>>,
+
+    masked_amount_version: McMaskedAmountVersion,
 }
 
 #[repr(C)]
@@ -114,18 +122,38 @@ pub extern "C" fn mc_tx_out_reconstruct_commitment(
 
         let shared_secret = get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
 
-        let (masked_amount, _) = MaskedAmount::reconstruct_v1(
-            tx_out_masked_amount.masked_value,
-            &tx_out_masked_amount.masked_token_id,
-            &shared_secret,
-        )?;
+        // Reconstruct the correct masked amount version
+        match tx_out_masked_amount.masked_amount_version {
+            McMaskedAmountVersion::V1 => {
+                let (masked_amount, _) = MaskedAmount::reconstruct_v1(
+                    tx_out_masked_amount.masked_value,
+                    &tx_out_masked_amount.masked_token_id,
+                    &shared_secret,
+                )?;
 
-        let out_tx_out_commitment = out_tx_out_commitment
-            .into_mut()
-            .as_slice_mut_of_len(RistrettoPublic::size())
-            .expect("out_tx_out_commitment length is insufficient");
+                let out_tx_out_commitment = out_tx_out_commitment
+                    .into_mut()
+                    .as_slice_mut_of_len(RistrettoPublic::size())
+                    .expect("out_tx_out_commitment length is insufficient");
 
-        out_tx_out_commitment.copy_from_slice(&masked_amount.commitment().to_bytes());
+                out_tx_out_commitment.copy_from_slice(&masked_amount.commitment().to_bytes());
+            }
+            McMaskedAmountVersion::V2 => {
+                let (masked_amount, _) = MaskedAmount::reconstruct_v2(
+                    tx_out_masked_amount.masked_value,
+                    &tx_out_masked_amount.masked_token_id,
+                    &shared_secret,
+                )?;
+
+                let out_tx_out_commitment = out_tx_out_commitment
+                    .into_mut()
+                    .as_slice_mut_of_len(RistrettoPublic::size())
+                    .expect("out_tx_out_commitment length is insufficient");
+
+                out_tx_out_commitment.copy_from_slice(&masked_amount.commitment().to_bytes());
+            }
+
+        }
         Ok(())
     })
 }
@@ -241,13 +269,28 @@ pub extern "C" fn mc_tx_out_get_amount(
         let view_private_key = RistrettoPrivate::try_from_ffi(&view_private_key)?;
 
         let shared_secret = get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
-        let (_masked_amount, amount) = MaskedAmount::reconstruct_v1(
-            tx_out_masked_amount.masked_value,
-            &tx_out_masked_amount.masked_token_id,
-            &shared_secret,
-        )?;
 
-        *out_amount.into_mut() = McTxOutAmount::from(amount);
+        // Reconstruct the correct masked amount version
+        match tx_out_masked_amount.masked_amount_version {
+            McMaskedAmountVersion::V1 => {
+                let (_, amount) = MaskedAmount::reconstruct_v1(
+                    tx_out_masked_amount.masked_value,
+                    &tx_out_masked_amount.masked_token_id,
+                    &shared_secret,
+                )?;
+
+                *out_amount.into_mut() = McTxOutAmount::from(amount);
+            }
+            McMaskedAmountVersion::V2 => {
+                let (_, amount) = MaskedAmount::reconstruct_v2(
+                    tx_out_masked_amount.masked_value,
+                    &tx_out_masked_amount.masked_token_id,
+                    &shared_secret,
+                )?;
+
+                *out_amount.into_mut() = McTxOutAmount::from(amount);
+            }
+        }
         Ok(())
     })
 }
