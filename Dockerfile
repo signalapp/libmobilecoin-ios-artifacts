@@ -47,6 +47,7 @@ COPY Vendor/mobilecoin/fog/api/proto/fog_common.proto \
     Vendor/mobilecoin/fog/api/proto/kex_rng.proto \
     Vendor/mobilecoin/fog/api/proto/ledger.proto \
     Vendor/mobilecoin/fog/api/proto/view.proto \
+    libmobilecoin/legacy/legacyview.proto \
     Vendor/mobilecoin/fog/api/proto/
 
 RUN mkdir -p Sources/Generated/Proto
@@ -73,7 +74,8 @@ RUN protoc \
     fog_common.proto \
     kex_rng.proto \
     ledger.proto \
-    view.proto
+    view.proto \
+    legacyview.proto
 
 
 FROM scratch
