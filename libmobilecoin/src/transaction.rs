@@ -739,7 +739,7 @@ pub extern "C" fn mc_transaction_builder_build(
 
 /// # Preconditions
 ///
-/// * `account_key` - must be a valid `AccountKey` with `fog_info`.
+/// * `account_key` - must be a valid `AccountKey`
 #[no_mangle]
 pub extern "C" fn mc_memo_builder_sender_and_destination_create(
     account_key: FfiRefPtr<McAccountKey>,
@@ -758,7 +758,7 @@ pub extern "C" fn mc_memo_builder_sender_and_destination_create(
 
 /// # Preconditions
 ///
-/// * `account_key` - must be a valid `AccountKey` with `fog_info`.
+/// * `account_key` - must be a valid `AccountKey`
 #[no_mangle]
 pub extern "C" fn mc_memo_builder_sender_payment_request_and_destination_create(
     payment_request_id: u64,
@@ -779,7 +779,7 @@ pub extern "C" fn mc_memo_builder_sender_payment_request_and_destination_create(
 
 /// # Preconditions
 ///
-/// * `account_key` - must be a valid `AccountKey` with `fog_info`.
+/// * `account_key` - must be a valid `AccountKey`
 #[no_mangle]
 pub extern "C" fn mc_memo_builder_sender_payment_intent_and_destination_create(
     payment_intent_id: u64,
