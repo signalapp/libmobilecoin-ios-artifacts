@@ -10,6 +10,7 @@ pub mod crypto;
 pub mod encodings;
 pub mod fog;
 pub mod keys;
+pub mod signed_contingent_input;
 pub mod slip10;
 pub mod transaction;
 

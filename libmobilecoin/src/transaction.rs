@@ -32,7 +32,7 @@ use mc_transaction_extra::{
     AuthenticatedSenderWithPaymentRequestIdMemo, DestinationMemo,
     DestinationWithPaymentIntentIdMemo, DestinationWithPaymentRequestIdMemo,
     GiftCodeCancellationMemo, GiftCodeFundingMemo, GiftCodeSenderMemo,
-    SenderMemoCredential, TxOutConfirmationNumber,
+    SenderMemoCredential, SignedContingentInput, TxOutConfirmationNumber,
 };
 use mc_util_ffi::*;
 
@@ -544,6 +544,39 @@ pub extern "C" fn mc_transaction_builder_add_input(
 ///
 /// * `transaction_builder` - must not have been previously consumed by a call
 ///   to `build`.
+/// * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
+/// * `subaddress_spend_private_key` - must be a valid 32-byte Ristretto-format
+///   scalar.
+/// * `real_index` - must be within bounds of `ring`.
+/// * `ring` - `TxOut` at `real_index` must be owned by account keys.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_transaction_builder_add_presigned_input(
+    transaction_builder: FfiMutPtr<McTransactionBuilder>,
+    presigned_input_proto_bytes: FfiRefPtr<McBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let sci: SignedContingentInput = mc_util_serial::decode(presigned_input_proto_bytes.as_slice())
+            .expect("presigned_input_proto_bytes could not be converted to SignedContingentInput");
+        let transaction_builder = transaction_builder
+            .into_mut()
+            .as_mut()
+            .expect("McTransactionBuilder instance has already been used to build a Tx");
+        transaction_builder.add_presigned_input(sci)
+        .map_err(|err| LibMcError::InvalidInput(format!("{:?}", err)))?;
+
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `transaction_builder` - must not have been previously consumed by a call
+///   to `build`.
 /// * `recipient_address` - must be a valid `PublicAddress`.
 /// * `out_subaddress_spend_public_key` - length must be >= 32.
 ///
@@ -555,6 +588,7 @@ pub extern "C" fn mc_transaction_builder_add_input(
 pub extern "C" fn mc_transaction_builder_add_output(
     transaction_builder: FfiMutPtr<McTransactionBuilder>,
     amount: u64,
+    token_id: u64,
     recipient_address: FfiRefPtr<McPublicAddress>,
     rng_callback: FfiOptMutPtr<McRngCallback>,
     out_tx_out_confirmation_number: FfiMutPtr<McMutableBuffer>,
@@ -575,11 +609,9 @@ pub extern "C" fn mc_transaction_builder_add_output(
             .as_slice_mut_of_len(TxOutConfirmationNumber::size())
             .expect("out_tx_out_confirmation_number length is insufficient");
 
-        // TODO (GH #1867): If you want to support mixed transactions, use something
-        // other than fee_token_id here.
         let amount = Amount {
             value: amount,
-            token_id: transaction_builder.get_fee_token_id(),
+            token_id: TokenId::from(token_id),
         };
 
         let out_tx_out_shared_secret = out_tx_out_shared_secret
@@ -614,6 +646,7 @@ pub extern "C" fn mc_transaction_builder_add_change_output(
     account_key: FfiRefPtr<McAccountKey>,
     transaction_builder: FfiMutPtr<McTransactionBuilder>,
     amount: u64,
+    token_id: u64,
     rng_callback: FfiOptMutPtr<McRngCallback>,
     out_tx_out_confirmation_number: FfiMutPtr<McMutableBuffer>,
     out_tx_out_shared_secret: FfiMutPtr<McMutableBuffer>,
@@ -634,11 +667,9 @@ pub extern "C" fn mc_transaction_builder_add_change_output(
             .as_slice_mut_of_len(TxOutConfirmationNumber::size())
             .expect("out_tx_out_confirmation_number length is insufficient");
 
-        // TODO (GH #1867): If you want to support mixed transactions, use something
-        // other than fee_token_id here.
         let amount = Amount {
             value: amount,
-            token_id: transaction_builder.get_fee_token_id(),
+            token_id: TokenId::from(token_id),
         };
 
         let out_tx_out_shared_secret = out_tx_out_shared_secret
@@ -673,6 +704,7 @@ pub extern "C" fn mc_transaction_builder_fund_gift_code_output(
     account_key: FfiRefPtr<McAccountKey>,
     transaction_builder: FfiMutPtr<McTransactionBuilder>,
     amount: u64,
+    token_id: u64,
     rng_callback: FfiOptMutPtr<McRngCallback>,
     out_tx_out_confirmation_number: FfiMutPtr<McMutableBuffer>,
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
@@ -691,12 +723,9 @@ pub extern "C" fn mc_transaction_builder_fund_gift_code_output(
             .as_slice_mut_of_len(TxOutConfirmationNumber::size())
             .expect("out_tx_out_confirmation_number length is insufficient");
 
-        // TODO (GH #1867): If you want to support mixed transactions, use something
-        // other than fee_token_id here. A token_id arg will probably become necessary
-        // prior to release 1.3.0.
         let amount = Amount {
             value: amount,
-            token_id: transaction_builder.get_fee_token_id(),
+            token_id: TokenId::from(token_id),
         };
 
         let tx_out_context =
