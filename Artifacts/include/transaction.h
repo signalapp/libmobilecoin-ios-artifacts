@@ -228,6 +228,22 @@ MC_ATTRIBUTE_NONNULL(1, 2, 3, 5);
 /// # Preconditions
 ///
 /// * `transaction_builder` - must not have been previously consumed by a call to `build`.
+/// * `presigned_input_proto_bytes` - serialized proto bytes for a Signed Contingent Input
+/// * `ring` - `TxOut` at `real_index` must be owned by account keys.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+bool mc_transaction_builder_add_presigned_input(
+  McTransactionBuilder* MC_NONNULL transaction_builder,
+  const McBuffer* MC_NONNULL presigned_input_proto_bytes,
+  McError* MC_NULLABLE * MC_NULLABLE out_error
+)
+MC_ATTRIBUTE_NONNULL(1, 2);
+
+/// # Preconditions
+///
+/// * `transaction_builder` - must not have been previously consumed by a call to `build`.
 /// * `recipient_address` - must be a valid `PublicAddress`.
 /// * `out_subaddress_spend_public_key` - length must be >= 32.
 ///
@@ -238,13 +254,14 @@ MC_ATTRIBUTE_NONNULL(1, 2, 3, 5);
 McData* MC_NULLABLE mc_transaction_builder_add_output(
   McTransactionBuilder* MC_NONNULL transaction_builder,
   uint64_t amount,
+  uint64_t token_id,
   const McPublicAddress* MC_NONNULL recipient_address,
   McRngCallback* MC_NULLABLE rng_callback,
   McMutableBuffer* MC_NONNULL out_tx_out_confirmation_number,
   McMutableBuffer* MC_NONNULL out_tx_out_shared_secret,
   McError* MC_NULLABLE * MC_NULLABLE out_error
 )
-MC_ATTRIBUTE_NONNULL(1, 3, 5, 6);
+MC_ATTRIBUTE_NONNULL(1, 4, 6, 7);
 
 /// # Preconditions
 ///
@@ -261,12 +278,13 @@ McData* MC_NULLABLE mc_transaction_builder_add_change_output(
   const McAccountKey* MC_NONNULL account_key,
   McTransactionBuilder* MC_NONNULL transaction_builder,
   uint64_t amount,
+  uint64_t token_id,
   McRngCallback* MC_NULLABLE rng_callback,
   McMutableBuffer* MC_NONNULL out_tx_out_confirmation_number,
   McMutableBuffer* MC_NONNULL out_tx_out_shared_secret,
   McError* MC_NULLABLE * MC_NULLABLE out_error
 )
-MC_ATTRIBUTE_NONNULL(1, 2, 4, 6);
+MC_ATTRIBUTE_NONNULL(1, 2, 6, 7);
 
 /// # Preconditions
 ///
@@ -284,11 +302,12 @@ McData* MC_NULLABLE mc_transaction_builder_fund_gift_code_output(
         const McAccountKey* MC_NONNULL account_key,
         McTransactionBuilder* MC_NONNULL transaction_builder,
         uint64_t amount,
+        uint64_t token_id,
         McRngCallback* MC_NULLABLE rng_callback,
         McMutableBuffer* MC_NONNULL out_tx_out_confirmation_number,
         McError* MC_NULLABLE * MC_NULLABLE out_error
 )
-MC_ATTRIBUTE_NONNULL(1, 2, 5);
+MC_ATTRIBUTE_NONNULL(1, 2, 6);
 
 /// # Preconditions
 ///
