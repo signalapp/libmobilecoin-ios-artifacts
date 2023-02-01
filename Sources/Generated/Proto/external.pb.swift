@@ -1604,17 +1604,70 @@ public struct External_UnsignedTx {
   //// A "ring" of transaction outputs.
   public var rings: [External_InputRing] = []
 
-  //// The amount and blinding factors of each of the outputs we are creating.
-  public var outputSecrets: [External_OutputSecret] = []
-
   //// The block version that this transaction is valid for.
   public var blockVersion: UInt32 = 0
+
+  //// The unblinding data for each of the outputs we are creating.
+  //// This also contains the output secrets needed for building the signature.
+  //// (Those were previously at tag value 3)
+  public var txOutUnblindingData: [External_TxOutSummaryUnblindingData] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _txPrefix: External_TxPrefix? = nil
+}
+
+public struct External_TxOutSummaryUnblindingData {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  //// An unmasked amount, corresponding to the MaskedAmount field
+  //// The block version appears in the TxSummaryUnblindingData.
+  public var unmaskedAmount: External_UnmaskedAmount {
+    get {return _unmaskedAmount ?? External_UnmaskedAmount()}
+    set {_unmaskedAmount = newValue}
+  }
+  /// Returns true if `unmaskedAmount` has been explicitly set.
+  public var hasUnmaskedAmount: Bool {return self._unmaskedAmount != nil}
+  /// Clears the value of `unmaskedAmount`. Subsequent reads from it will return its default value.
+  public mutating func clearUnmaskedAmount() {self._unmaskedAmount = nil}
+
+  //// The public address to which this TxOut is addressed.
+  //// If this output comes from an SCI then we may not know the public
+  //// address.
+  public var address: External_PublicAddress {
+    get {return _address ?? External_PublicAddress()}
+    set {_address = newValue}
+  }
+  /// Returns true if `address` has been explicitly set.
+  public var hasAddress: Bool {return self._address != nil}
+  /// Clears the value of `address`. Subsequent reads from it will return its default value.
+  public mutating func clearAddress() {self._address = nil}
+
+  //// The tx_private_key generated for this TxOut. This is an entropy source
+  //// which introduces randomness into the cryptonote stealth addresses
+  //// (tx_public_key and tx_target_key) of the TxOut.
+  ////
+  //// If this output comes from an SCI then we may not know this.
+  public var txPrivateKey: External_RistrettoPrivate {
+    get {return _txPrivateKey ?? External_RistrettoPrivate()}
+    set {_txPrivateKey = newValue}
+  }
+  /// Returns true if `txPrivateKey` has been explicitly set.
+  public var hasTxPrivateKey: Bool {return self._txPrivateKey != nil}
+  /// Clears the value of `txPrivateKey`. Subsequent reads from it will return its default value.
+  public mutating func clearTxPrivateKey() {self._txPrivateKey = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _unmaskedAmount: External_UnmaskedAmount? = nil
+  fileprivate var _address: External_PublicAddress? = nil
+  fileprivate var _txPrivateKey: External_RistrettoPrivate? = nil
 }
 
 //// A structure that contains all the data required to sign a transaction that
@@ -1724,6 +1777,7 @@ extension External_PresignedInputRing: @unchecked Sendable {}
 extension External_InputRing: @unchecked Sendable {}
 extension External_InputRing.OneOf_Ring: @unchecked Sendable {}
 extension External_UnsignedTx: @unchecked Sendable {}
+extension External_TxOutSummaryUnblindingData: @unchecked Sendable {}
 extension External_SigningData: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
@@ -3992,8 +4046,8 @@ extension External_UnsignedTx: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "tx_prefix"),
     2: .same(proto: "rings"),
-    3: .standard(proto: "output_secrets"),
     4: .standard(proto: "block_version"),
+    5: .standard(proto: "tx_out_unblinding_data"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4004,8 +4058,8 @@ extension External_UnsignedTx: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._txPrefix) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.rings) }()
-      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.outputSecrets) }()
       case 4: try { try decoder.decodeSingularUInt32Field(value: &self.blockVersion) }()
+      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.txOutUnblindingData) }()
       default: break
       }
     }
@@ -4022,11 +4076,11 @@ extension External_UnsignedTx: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     if !self.rings.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.rings, fieldNumber: 2)
     }
-    if !self.outputSecrets.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.outputSecrets, fieldNumber: 3)
-    }
     if self.blockVersion != 0 {
       try visitor.visitSingularUInt32Field(value: self.blockVersion, fieldNumber: 4)
+    }
+    if !self.txOutUnblindingData.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.txOutUnblindingData, fieldNumber: 5)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -4034,8 +4088,56 @@ extension External_UnsignedTx: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
   public static func ==(lhs: External_UnsignedTx, rhs: External_UnsignedTx) -> Bool {
     if lhs._txPrefix != rhs._txPrefix {return false}
     if lhs.rings != rhs.rings {return false}
-    if lhs.outputSecrets != rhs.outputSecrets {return false}
     if lhs.blockVersion != rhs.blockVersion {return false}
+    if lhs.txOutUnblindingData != rhs.txOutUnblindingData {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension External_TxOutSummaryUnblindingData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TxOutSummaryUnblindingData"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "unmasked_amount"),
+    2: .same(proto: "address"),
+    3: .standard(proto: "tx_private_key"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._unmaskedAmount) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._address) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._txPrivateKey) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._unmaskedAmount {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._address {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._txPrivateKey {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_TxOutSummaryUnblindingData, rhs: External_TxOutSummaryUnblindingData) -> Bool {
+    if lhs._unmaskedAmount != rhs._unmaskedAmount {return false}
+    if lhs._address != rhs._address {return false}
+    if lhs._txPrivateKey != rhs._txPrivateKey {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

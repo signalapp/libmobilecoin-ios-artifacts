@@ -1,7 +1,7 @@
 version: 2.1
 
 defaults:
-  default-xcode-version: &default-xcode-version "12.5.1"
+  default-xcode-version: &default-xcode-version "14.1.0"
   default-ruby-version: &default-ruby-version "2.7"
 
   default-environment: &default-environment
@@ -75,7 +75,7 @@ commands:
     steps:
       - restore_cache:
           name: Restore Homebrew cache
-          key: v0-homebrew-{{ arch }}
+          key: v1-homebrew-{{ arch }}
       - run:
           name: Update Homebrew
           working_directory: Vendor/mobilecoin
@@ -90,6 +90,7 @@ commands:
             rm '/usr/local/lib/python3.9/site-packages/six.py'
             brew install llvm
             brew install ninja
+            brew install pkg-config
             brew bundle --no-upgrade
 
   save-homebrew-cache:
@@ -384,8 +385,8 @@ commands:
       - restore_cache:
           name: Restore Ruby gem cache swift sdk
           keys:
-            - v1-ruby-<< parameters.ruby-version >>-gems-{{ checksum "~/MobileCoin-Swift/Gemfile.lock" }}
-            - v1-ruby-<< parameters.ruby-version >>-gems-
+            - v2-ruby-<< parameters.ruby-version >>-gems-{{ checksum "~/MobileCoin-Swift/Gemfile.lock" }}
+            - v2-ruby-<< parameters.ruby-version >>-gems-
       - run:
           name: Install root bundler dependencies
           working_directory: ~/MobileCoin-Swift
