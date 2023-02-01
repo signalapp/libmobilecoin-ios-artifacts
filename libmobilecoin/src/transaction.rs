@@ -585,7 +585,7 @@ pub extern "C" fn mc_transaction_builder_add_presigned_input(
 /// * `LibMcError::AttestationVerification`
 /// * `LibMcError::InvalidInput`
 #[no_mangle]
-pub extern "C" fn mc_transaction_builder_add_output(
+pub extern "C" fn mc_transaction_builder_add_output_mixed(
     transaction_builder: FfiMutPtr<McTransactionBuilder>,
     amount: u64,
     token_id: u64,
@@ -631,6 +631,63 @@ pub extern "C" fn mc_transaction_builder_add_output(
 
 /// # Preconditions
 ///
+/// * `transaction_builder` - must not have been previously consumed by a call
+///   to `build`.
+/// * `recipient_address` - must be a valid `PublicAddress`.
+/// * `out_subaddress_spend_public_key` - length must be >= 32.
+///
+/// # Errors
+///
+/// * `LibMcError::AttestationVerification`
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_transaction_builder_add_output(
+    transaction_builder: FfiMutPtr<McTransactionBuilder>,
+    amount: u64,
+    recipient_address: FfiRefPtr<McPublicAddress>,
+    rng_callback: FfiOptMutPtr<McRngCallback>,
+    out_tx_out_confirmation_number: FfiMutPtr<McMutableBuffer>,
+    out_tx_out_shared_secret: FfiMutPtr<McMutableBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> FfiOptOwnedPtr<McData> {
+    ffi_boundary_with_error(out_error, || {
+        let transaction_builder = transaction_builder
+            .into_mut()
+            .as_mut()
+            .expect("McTransactionBuilder instance has already been used to build a Tx");
+        let recipient_address =
+            PublicAddress::try_from_ffi(&recipient_address).expect("recipient_address is invalid");
+        let mut rng = SdkRng::from_ffi(rng_callback);
+
+        let out_tx_out_confirmation_number = out_tx_out_confirmation_number
+            .into_mut()
+            .as_slice_mut_of_len(TxOutConfirmationNumber::size())
+            .expect("out_tx_out_confirmation_number length is insufficient");
+
+        // TODO (GH #1867): If you want to support mixed transactions, use something
+        // other than fee_token_id here.
+        let amount = Amount {
+            value: amount,
+            token_id: transaction_builder.get_fee_token_id(),
+        };
+
+        let out_tx_out_shared_secret = out_tx_out_shared_secret
+            .into_mut()
+            .as_slice_mut_of_len(RistrettoPublic::size())
+            .expect("out_tx_out_shared_secret length is insufficient");
+
+        let tx_out_context =
+            transaction_builder.add_output(amount, &recipient_address, &mut rng)?;
+
+        out_tx_out_confirmation_number.copy_from_slice(tx_out_context.confirmation.as_ref());
+        out_tx_out_shared_secret.copy_from_slice(&tx_out_context.shared_secret.to_bytes());
+
+        Ok(mc_util_serial::encode(&tx_out_context.tx_out))
+    })
+}
+
+/// # Preconditions
+///
 /// * `account_key` - must be a valid account key, default change address
 ///   computed from account key
 /// * `transaction_builder` - must not have been previously consumed by a call
@@ -642,7 +699,7 @@ pub extern "C" fn mc_transaction_builder_add_output(
 /// * `LibMcError::AttestationVerification`
 /// * `LibMcError::InvalidInput`
 #[no_mangle]
-pub extern "C" fn mc_transaction_builder_add_change_output(
+pub extern "C" fn mc_transaction_builder_add_change_output_mixed(
     account_key: FfiRefPtr<McAccountKey>,
     transaction_builder: FfiMutPtr<McTransactionBuilder>,
     amount: u64,
@@ -670,6 +727,65 @@ pub extern "C" fn mc_transaction_builder_add_change_output(
         let amount = Amount {
             value: amount,
             token_id: TokenId::from(token_id),
+        };
+
+        let out_tx_out_shared_secret = out_tx_out_shared_secret
+            .into_mut()
+            .as_slice_mut_of_len(RistrettoPublic::size())
+            .expect("out_tx_out_shared_secret length is insufficient");
+
+        let tx_out_context =
+            transaction_builder.add_change_output(amount, &change_destination, &mut rng)?;
+
+        out_tx_out_confirmation_number.copy_from_slice(tx_out_context.confirmation.as_ref());
+        out_tx_out_shared_secret.copy_from_slice(&tx_out_context.shared_secret.to_bytes());
+
+        Ok(mc_util_serial::encode(&tx_out_context.tx_out))
+    })
+}
+
+/// # Preconditions
+///
+/// * `account_key` - must be a valid account key, default change address
+///   computed from account key
+/// * `transaction_builder` - must not have been previously consumed by a call
+///   to `build`.
+/// * `out_tx_out_confirmation_number` - length must be >= 32.
+///
+/// # Errors
+///
+/// * `LibMcError::AttestationVerification`
+/// * `LibMcError::InvalidInput`
+#[no_mangle]
+pub extern "C" fn mc_transaction_builder_add_change_output(
+    account_key: FfiRefPtr<McAccountKey>,
+    transaction_builder: FfiMutPtr<McTransactionBuilder>,
+    amount: u64,
+    rng_callback: FfiOptMutPtr<McRngCallback>,
+    out_tx_out_confirmation_number: FfiMutPtr<McMutableBuffer>,
+    out_tx_out_shared_secret: FfiMutPtr<McMutableBuffer>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> FfiOptOwnedPtr<McData> {
+    ffi_boundary_with_error(out_error, || {
+        let account_key_obj =
+            AccountKey::try_from_ffi(&account_key).expect("account_key is invalid");
+        let transaction_builder = transaction_builder
+            .into_mut()
+            .as_mut()
+            .expect("McTransactionBuilder instance has already been used to build a Tx");
+        let change_destination = ReservedSubaddresses::from(&account_key_obj);
+        let mut rng = SdkRng::from_ffi(rng_callback);
+
+        let out_tx_out_confirmation_number = out_tx_out_confirmation_number
+            .into_mut()
+            .as_slice_mut_of_len(TxOutConfirmationNumber::size())
+            .expect("out_tx_out_confirmation_number length is insufficient");
+
+        // TODO (GH #1867): If you want to support mixed transactions, use something
+        // other than fee_token_id here.
+        let amount = Amount {
+            value: amount,
+            token_id: transaction_builder.get_fee_token_id(),
         };
 
         let out_tx_out_shared_secret = out_tx_out_shared_secret

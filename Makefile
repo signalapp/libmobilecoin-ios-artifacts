@@ -100,6 +100,14 @@ lint-podspec:
 publish-podspec:
 	bundle exec pod trunk push LibMobileCoin.podspec --allow-warnings
 
+.PHONY: patch-cmake
+patch-cmake:
+	tools/patch-cmake.sh
+
+.PHONY: unpatch-cmake
+unpatch-cmake:
+	tools/unpatch-cmake.sh
+
 .PHONY: clean
 clean:
 	$(MAKE) -C libmobilecoin clean
