@@ -847,7 +847,7 @@ workflows:
             - make-generate
           matrix:
             parameters:
-              xcode-version: [*default-xcode-version]
+              xcode-version: ["12.5.1"]
 
       - publish-pod-release:
           filters:
