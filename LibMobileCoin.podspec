@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.name         = "LibMobileCoin"
-  s.version      = "4.1.0"
+  s.version      = "4.1.1"
   s.summary      = "A library for communicating with MobileCoin network"
 
   s.author       = "MobileCoin"
@@ -42,7 +42,8 @@ Pod::Spec.new do |s|
  
      subspec.source_files = [
        "Artifacts/include/*.h",
-       "Sources/Generated/Proto/*.{grpc,pb}.swift",
+       "Sources/Generated/Proto/*.{grpc,pb,http}.swift",
+       "Sources/Generated/Interface/*.swift",
      ]
  
      subspec.dependency "gRPC-Swift"
@@ -56,7 +57,8 @@ Pod::Spec.new do |s|
  
      subspec.source_files = [
        "Artifacts/include/*.h",
-       "Sources/Generated/Proto/*.pb.swift",
+       "Sources/Generated/Proto/*.{pb,http}.swift",
+       "Sources/Generated/Interface/*.swift",
      ]
  
      subspec.dependency "SwiftProtobuf", "~> 1.5"
