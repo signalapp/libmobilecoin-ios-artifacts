@@ -8,10 +8,14 @@ ARG grpc_swift_version
 
 WORKDIR /root
 RUN git clone --depth 1 -b $grpc_swift_version https://github.com/grpc/grpc-swift.git
+RUN git clone --depth 1 https://github.com/mobilecoinofficial/protoc-gen-http-swift.git
 
 WORKDIR grpc-swift
 RUN make plugins
 
+WORKDIR /root
+WORKDIR protoc-gen-http-swift
+RUN make plugins
 
 FROM swift:focal as build
 
@@ -24,8 +28,10 @@ RUN apt-get -q update && apt-get -q install -y --no-install-recommends \
 COPY --from=plugins \
     /root/grpc-swift/protoc-gen-grpc-swift \
     /root/grpc-swift/protoc-gen-swift \
-    /root/grpc-swift-plugins/bin/
-ENV PATH="/root/grpc-swift-plugins/bin:${PATH}"
+    /root/protoc-gen-http-swift/protoc-gen-http-swift \
+    /root/swift-plugins/bin/
+
+ENV PATH="/root/swift-plugins/bin:${PATH}"
 
 WORKDIR /root/project
 
@@ -64,7 +70,7 @@ RUN protoc \
     external.proto \
     blockchain.proto \
     printable.proto \
-	quorum_set.proto \
+    quorum_set.proto \
     watcher.proto \
     attest.proto \
     consensus_client.proto \
@@ -77,6 +83,30 @@ RUN protoc \
     view.proto \
     legacyview.proto
 
+RUN protoc \
+    --plugin=/root/swift-plugins/bin/protoc-gen-http-swift \
+    --http-swift_out=Sources/Generated/Proto \
+    --http-swift_opt=Client=true,Visibility=Public \
+    -IVendor/mobilecoin/api/proto \
+    -IVendor/mobilecoin/attest/api/proto \
+    -IVendor/mobilecoin/consensus/api/proto \
+    -IVendor/mobilecoin/fog/api/proto \
+    -IVendor/mobilecoin/fog/report/api/proto \
+    external.proto \
+    blockchain.proto \
+    printable.proto \
+    quorum_set.proto \
+    watcher.proto \
+    attest.proto \
+    consensus_client.proto \
+    consensus_common.proto \
+    consensus_config.proto \
+    report.proto \
+    fog_common.proto \
+    kex_rng.proto \
+    ledger.proto \
+    view.proto \
+    legacyview.proto
 
 FROM scratch
 
