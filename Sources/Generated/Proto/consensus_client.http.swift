@@ -20,7 +20,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+#if canImport(SwiftProtobuf)
 import SwiftProtobuf
+#endif
 
 
 /// Usage: instantiate `ConsensusClient_ConsensusClientAPIRestClient`, then call methods of this protocol to make API calls.

@@ -3,7 +3,7 @@ LIBMOBILECOIN_LIB_DIR = libmobilecoin
 LIBMOBILECOIN_ARTIFACTS_DIR = $(LIBMOBILECOIN_LIB_DIR)/out/ios
 LIBMOBILECOIN_ARTIFACTS_HEADERS = $(LIBMOBILECOIN_LIB_DIR)/out/ios/include
 ARTIFACTS_DIR = Artifacts
-IOS_TARGETS = aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-ios-macabi x86_64-apple-ios x86_64-apple-ios-macabi
+IOS_TARGETS = aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
 LIBMOBILECOIN_PROFILE = mobile-release
 
 define BINARY_copy

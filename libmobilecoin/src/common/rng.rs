@@ -3,7 +3,7 @@
 use super::{FfiTryFrom, FromFfi};
 use crate::LibMcError;
 use core::{convert::TryFrom, ffi::c_void};
-use mc_crypto_rand::McRng;
+use mc_rand::McRng;
 use mc_util_ffi::FfiOptMutPtr;
 use rand_core::{CryptoRng, RngCore};
 

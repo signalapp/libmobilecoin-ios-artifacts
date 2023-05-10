@@ -2374,7 +2374,8 @@ impl<'a> TryFromFfi<&McBuffer<'a>> for CompressedCommitment {
 
     fn try_from_ffi(src: &McBuffer<'a>) -> Result<Self, LibMcError> {
         let src = <&[u8; 32]>::try_from_ffi(src)?;
-        Ok(CompressedCommitment::from(src))
+        CompressedCommitment::try_from(src)
+            .map_err(|err| LibMcError::InvalidInput(format!("{:?}", err)))
     }
 }
 
