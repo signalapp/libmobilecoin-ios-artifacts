@@ -25,6 +25,226 @@ import NIO
 import SwiftProtobuf
 
 
+/// Usage: instantiate `FogLedger_LedgerAPIClient`, then call methods of this protocol to make API calls.
+public protocol FogLedger_LedgerAPIClientProtocol: GRPCClient {
+  var serviceName: String { get }
+  var interceptors: FogLedger_LedgerAPIClientInterceptorFactoryProtocol? { get }
+
+  func request(
+    callOptions: CallOptions?,
+    handler: @escaping (FogLedger_LedgerResponse) -> Void
+  ) -> BidirectionalStreamingCall<FogLedger_LedgerRequest, FogLedger_LedgerResponse>
+}
+
+extension FogLedger_LedgerAPIClientProtocol {
+  public var serviceName: String {
+    return "fog_ledger.LedgerAPI"
+  }
+
+  /// Bidirectional streaming call to Request
+  ///
+  /// Callers should use the `send` method on the returned object to send messages
+  /// to the server. The caller should send an `.end` after the final message has been sent.
+  ///
+  /// - Parameters:
+  ///   - callOptions: Call options.
+  ///   - handler: A closure called when each response is received from the server.
+  /// - Returns: A `ClientStreamingCall` with futures for the metadata and status.
+  public func request(
+    callOptions: CallOptions? = nil,
+    handler: @escaping (FogLedger_LedgerResponse) -> Void
+  ) -> BidirectionalStreamingCall<FogLedger_LedgerRequest, FogLedger_LedgerResponse> {
+    return self.makeBidirectionalStreamingCall(
+      path: "/fog_ledger.LedgerAPI/Request",
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeRequestInterceptors() ?? [],
+      handler: handler
+    )
+  }
+}
+
+public protocol FogLedger_LedgerAPIClientInterceptorFactoryProtocol {
+
+  /// - Returns: Interceptors to use when invoking 'request'.
+  func makeRequestInterceptors() -> [ClientInterceptor<FogLedger_LedgerRequest, FogLedger_LedgerResponse>]
+}
+
+public final class FogLedger_LedgerAPIClient: FogLedger_LedgerAPIClientProtocol {
+  public let channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: FogLedger_LedgerAPIClientInterceptorFactoryProtocol?
+
+  /// Creates a client for the fog_ledger.LedgerAPI service.
+  ///
+  /// - Parameters:
+  ///   - channel: `GRPCChannel` to the service host.
+  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+  ///   - interceptors: A factory providing interceptors for each RPC.
+  public init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: FogLedger_LedgerAPIClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self.defaultCallOptions = defaultCallOptions
+    self.interceptors = interceptors
+  }
+}
+
+/// Usage: instantiate `FogLedger_LedgerRouterAdminAPIClient`, then call methods of this protocol to make API calls.
+public protocol FogLedger_LedgerRouterAdminAPIClientProtocol: GRPCClient {
+  var serviceName: String { get }
+  var interceptors: FogLedger_LedgerRouterAdminAPIClientInterceptorFactoryProtocol? { get }
+
+  func addShard(
+    _ request: FogCommon_AddShardRequest,
+    callOptions: CallOptions?
+  ) -> UnaryCall<FogCommon_AddShardRequest, SwiftProtobuf.Google_Protobuf_Empty>
+}
+
+extension FogLedger_LedgerRouterAdminAPIClientProtocol {
+  public var serviceName: String {
+    return "fog_ledger.LedgerRouterAdminAPI"
+  }
+
+  /// Adds a shard to the Fog Ledger Router's list of shards to query.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to AddShard.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func addShard(
+    _ request: FogCommon_AddShardRequest,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<FogCommon_AddShardRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.makeUnaryCall(
+      path: "/fog_ledger.LedgerRouterAdminAPI/AddShard",
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeAddShardInterceptors() ?? []
+    )
+  }
+}
+
+public protocol FogLedger_LedgerRouterAdminAPIClientInterceptorFactoryProtocol {
+
+  /// - Returns: Interceptors to use when invoking 'addShard'.
+  func makeAddShardInterceptors() -> [ClientInterceptor<FogCommon_AddShardRequest, SwiftProtobuf.Google_Protobuf_Empty>]
+}
+
+public final class FogLedger_LedgerRouterAdminAPIClient: FogLedger_LedgerRouterAdminAPIClientProtocol {
+  public let channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: FogLedger_LedgerRouterAdminAPIClientInterceptorFactoryProtocol?
+
+  /// Creates a client for the fog_ledger.LedgerRouterAdminAPI service.
+  ///
+  /// - Parameters:
+  ///   - channel: `GRPCChannel` to the service host.
+  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+  ///   - interceptors: A factory providing interceptors for each RPC.
+  public init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: FogLedger_LedgerRouterAdminAPIClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self.defaultCallOptions = defaultCallOptions
+    self.interceptors = interceptors
+  }
+}
+
+//// Fulfills requests sent by the Fog Ledger Router. This is not meant to fulfill requests sent directly by the client.
+///
+/// Usage: instantiate `FogLedger_KeyImageStoreAPIClient`, then call methods of this protocol to make API calls.
+public protocol FogLedger_KeyImageStoreAPIClientProtocol: GRPCClient {
+  var serviceName: String { get }
+  var interceptors: FogLedger_KeyImageStoreAPIClientInterceptorFactoryProtocol? { get }
+
+  func auth(
+    _ request: Attest_AuthMessage,
+    callOptions: CallOptions?
+  ) -> UnaryCall<Attest_AuthMessage, Attest_AuthMessage>
+
+  func multiKeyImageStoreQuery(
+    _ request: FogLedger_MultiKeyImageStoreRequest,
+    callOptions: CallOptions?
+  ) -> UnaryCall<FogLedger_MultiKeyImageStoreRequest, FogLedger_MultiKeyImageStoreResponse>
+}
+
+extension FogLedger_KeyImageStoreAPIClientProtocol {
+  public var serviceName: String {
+    return "fog_ledger.KeyImageStoreAPI"
+  }
+
+  //// This is called to perform IX key exchange with the enclave before calling GetOutputs.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to Auth.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func auth(
+    _ request: Attest_AuthMessage,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<Attest_AuthMessage, Attest_AuthMessage> {
+    return self.makeUnaryCall(
+      path: "/fog_ledger.KeyImageStoreAPI/Auth",
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeAuthInterceptors() ?? []
+    )
+  }
+
+  //// Input should be an encrypted MultiKeyImageStoreRequest, result is an encrypted response.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to MultiKeyImageStoreQuery.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func multiKeyImageStoreQuery(
+    _ request: FogLedger_MultiKeyImageStoreRequest,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<FogLedger_MultiKeyImageStoreRequest, FogLedger_MultiKeyImageStoreResponse> {
+    return self.makeUnaryCall(
+      path: "/fog_ledger.KeyImageStoreAPI/MultiKeyImageStoreQuery",
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeMultiKeyImageStoreQueryInterceptors() ?? []
+    )
+  }
+}
+
+public protocol FogLedger_KeyImageStoreAPIClientInterceptorFactoryProtocol {
+
+  /// - Returns: Interceptors to use when invoking 'auth'.
+  func makeAuthInterceptors() -> [ClientInterceptor<Attest_AuthMessage, Attest_AuthMessage>]
+
+  /// - Returns: Interceptors to use when invoking 'multiKeyImageStoreQuery'.
+  func makeMultiKeyImageStoreQueryInterceptors() -> [ClientInterceptor<FogLedger_MultiKeyImageStoreRequest, FogLedger_MultiKeyImageStoreResponse>]
+}
+
+public final class FogLedger_KeyImageStoreAPIClient: FogLedger_KeyImageStoreAPIClientProtocol {
+  public let channel: GRPCChannel
+  public var defaultCallOptions: CallOptions
+  public var interceptors: FogLedger_KeyImageStoreAPIClientInterceptorFactoryProtocol?
+
+  /// Creates a client for the fog_ledger.KeyImageStoreAPI service.
+  ///
+  /// - Parameters:
+  ///   - channel: `GRPCChannel` to the service host.
+  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+  ///   - interceptors: A factory providing interceptors for each RPC.
+  public init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: FogLedger_KeyImageStoreAPIClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self.defaultCallOptions = defaultCallOptions
+    self.interceptors = interceptors
+  }
+}
+
 /// Usage: instantiate `FogLedger_FogMerkleProofAPIClient`, then call methods of this protocol to make API calls.
 public protocol FogLedger_FogMerkleProofAPIClientProtocol: GRPCClient {
   var serviceName: String { get }

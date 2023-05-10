@@ -294,6 +294,7 @@ commands:
             brew list --versions
             bundle env
             bundle exec pod env
+            bundle config unset deployment
             printenv
 
   set-ruby-version:
@@ -644,11 +645,7 @@ jobs:
       - restore-build-artifact-cache:
           build-target: aarch64-apple-ios-sim 
       - restore-build-artifact-cache:
-          build-target: aarch64-apple-ios-macabi 
-      - restore-build-artifact-cache:
           build-target: aarch64-apple-ios 
-      - restore-build-artifact-cache:
-          build-target: x86_64-apple-ios-macabi 
       - restore-build-artifact-cache:
           build-target: x86_64-apple-ios 
       - restore-build-artifact-cache:
@@ -775,26 +772,10 @@ workflows:
             parameters:
               xcode-version: [*default-xcode-version]
 
-      # m1-catalyst
-      - build-artifacts:
-          name: build-artifacts-m1-catalyst-xcode-<< matrix.xcode-version >>
-          build-target: "aarch64-apple-ios-macabi" 
-          matrix:
-            parameters:
-              xcode-version: [*default-xcode-version]
-
       # ios-device
       - build-artifacts:
           name: build-artifacts-ios-device-xcode-<< matrix.xcode-version >>
           build-target: "aarch64-apple-ios" 
-          matrix:
-            parameters:
-              xcode-version: [*default-xcode-version]
-
-      # intel-catalyst
-      - build-artifacts:
-          name: build-artifacts-intel-catalyst-xcode-<< matrix.xcode-version >>
-          build-target: "x86_64-apple-ios-macabi" 
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
@@ -819,9 +800,7 @@ workflows:
           name: copy-artifacats
           requires:
             - build-artifacts-m1-ios-sim-xcode-<< matrix.xcode-version >>
-            - build-artifacts-m1-catalyst-xcode-<< matrix.xcode-version >>
             - build-artifacts-ios-device-xcode-<< matrix.xcode-version >>
-            - build-artifacts-intel-catalyst-xcode-<< matrix.xcode-version >>
             - build-artifacts-intel-ios-sim-xcode-<< matrix.xcode-version >>
             - build-artifacts-intel-macos-xcode-<< matrix.xcode-version >>
           matrix:

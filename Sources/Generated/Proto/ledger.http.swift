@@ -20,8 +20,236 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+#if canImport(SwiftProtobuf)
 import SwiftProtobuf
+#endif
 
+
+/// Usage: instantiate `FogLedger_LedgerAPIRestClient`, then call methods of this protocol to make API calls.
+public protocol FogLedger_LedgerAPIRestClientProtocol: HTTPClient {
+  var serviceName: String { get }
+
+  func request(
+    _ request: FogLedger_LedgerRequest,
+    callOptions: HTTPCallOptions?
+  ) -> HTTPUnaryCall<FogLedger_LedgerRequest, FogLedger_LedgerResponse>
+}
+
+extension FogLedger_LedgerAPIRestClientProtocol {
+  public var serviceName: String {
+    return "fog_ledger.LedgerAPI"
+  }
+
+  /// Unary call to Request
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to Request.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func request(
+    _ request: FogLedger_LedgerRequest,
+    callOptions: HTTPCallOptions? = nil
+  ) -> HTTPUnaryCall<FogLedger_LedgerRequest, FogLedger_LedgerResponse> {
+    return self.makeUnaryCall(
+      path: FogLedger_LedgerAPIClientMetadata.Methods.request.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultHTTPCallOptions
+    )
+  }
+}
+
+public final class FogLedger_LedgerAPIRestClient: FogLedger_LedgerAPIRestClientProtocol {
+  public var defaultHTTPCallOptions: HTTPCallOptions
+
+  /// Creates a client for the fog_ledger.LedgerAPI service.
+  ///
+  /// - Parameters:
+  ///   - defaultHTTPCallOptions: Options to use for each service call if the user doesn't provide them.
+  public init(
+    defaultHTTPCallOptions: HTTPCallOptions = HTTPCallOptions()
+  ) {
+    self.defaultHTTPCallOptions = defaultHTTPCallOptions
+  }
+}
+
+public enum FogLedger_LedgerAPIClientMetadata {
+  public static let serviceDescriptor = HTTPServiceDescriptor(
+    name: "LedgerAPI",
+    fullName: "fog_ledger.LedgerAPI",
+    methods: [
+      FogLedger_LedgerAPIClientMetadata.Methods.request,
+    ]
+  )
+
+  public enum Methods {
+    public static let request = HTTPMethodDescriptor(
+      name: "Request",
+      path: "/fog_ledger.LedgerAPI/Request",
+      type: HTTPCallType.unary
+    )
+  }
+}
+
+/// Usage: instantiate `FogLedger_LedgerRouterAdminAPIRestClient`, then call methods of this protocol to make API calls.
+public protocol FogLedger_LedgerRouterAdminAPIRestClientProtocol: HTTPClient {
+  var serviceName: String { get }
+
+  func addShard(
+    _ request: FogCommon_AddShardRequest,
+    callOptions: HTTPCallOptions?
+  ) -> HTTPUnaryCall<FogCommon_AddShardRequest, SwiftProtobuf.Google_Protobuf_Empty>
+}
+
+extension FogLedger_LedgerRouterAdminAPIRestClientProtocol {
+  public var serviceName: String {
+    return "fog_ledger.LedgerRouterAdminAPI"
+  }
+
+  /// Adds a shard to the Fog Ledger Router's list of shards to query.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to AddShard.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func addShard(
+    _ request: FogCommon_AddShardRequest,
+    callOptions: HTTPCallOptions? = nil
+  ) -> HTTPUnaryCall<FogCommon_AddShardRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.makeUnaryCall(
+      path: FogLedger_LedgerRouterAdminAPIClientMetadata.Methods.addShard.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultHTTPCallOptions
+    )
+  }
+}
+
+public final class FogLedger_LedgerRouterAdminAPIRestClient: FogLedger_LedgerRouterAdminAPIRestClientProtocol {
+  public var defaultHTTPCallOptions: HTTPCallOptions
+
+  /// Creates a client for the fog_ledger.LedgerRouterAdminAPI service.
+  ///
+  /// - Parameters:
+  ///   - defaultHTTPCallOptions: Options to use for each service call if the user doesn't provide them.
+  public init(
+    defaultHTTPCallOptions: HTTPCallOptions = HTTPCallOptions()
+  ) {
+    self.defaultHTTPCallOptions = defaultHTTPCallOptions
+  }
+}
+
+public enum FogLedger_LedgerRouterAdminAPIClientMetadata {
+  public static let serviceDescriptor = HTTPServiceDescriptor(
+    name: "LedgerRouterAdminAPI",
+    fullName: "fog_ledger.LedgerRouterAdminAPI",
+    methods: [
+      FogLedger_LedgerRouterAdminAPIClientMetadata.Methods.addShard,
+    ]
+  )
+
+  public enum Methods {
+    public static let addShard = HTTPMethodDescriptor(
+      name: "AddShard",
+      path: "/fog_ledger.LedgerRouterAdminAPI/AddShard",
+      type: HTTPCallType.unary
+    )
+  }
+}
+
+//// Fulfills requests sent by the Fog Ledger Router. This is not meant to fulfill requests sent directly by the client.
+///
+/// Usage: instantiate `FogLedger_KeyImageStoreAPIRestClient`, then call methods of this protocol to make API calls.
+public protocol FogLedger_KeyImageStoreAPIRestClientProtocol: HTTPClient {
+  var serviceName: String { get }
+
+  func auth(
+    _ request: Attest_AuthMessage,
+    callOptions: HTTPCallOptions?
+  ) -> HTTPUnaryCall<Attest_AuthMessage, Attest_AuthMessage>
+
+  func multiKeyImageStoreQuery(
+    _ request: FogLedger_MultiKeyImageStoreRequest,
+    callOptions: HTTPCallOptions?
+  ) -> HTTPUnaryCall<FogLedger_MultiKeyImageStoreRequest, FogLedger_MultiKeyImageStoreResponse>
+}
+
+extension FogLedger_KeyImageStoreAPIRestClientProtocol {
+  public var serviceName: String {
+    return "fog_ledger.KeyImageStoreAPI"
+  }
+
+  //// This is called to perform IX key exchange with the enclave before calling GetOutputs.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to Auth.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func auth(
+    _ request: Attest_AuthMessage,
+    callOptions: HTTPCallOptions? = nil
+  ) -> HTTPUnaryCall<Attest_AuthMessage, Attest_AuthMessage> {
+    return self.makeUnaryCall(
+      path: FogLedger_KeyImageStoreAPIClientMetadata.Methods.auth.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultHTTPCallOptions
+    )
+  }
+
+  //// Input should be an encrypted MultiKeyImageStoreRequest, result is an encrypted response.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to MultiKeyImageStoreQuery.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func multiKeyImageStoreQuery(
+    _ request: FogLedger_MultiKeyImageStoreRequest,
+    callOptions: HTTPCallOptions? = nil
+  ) -> HTTPUnaryCall<FogLedger_MultiKeyImageStoreRequest, FogLedger_MultiKeyImageStoreResponse> {
+    return self.makeUnaryCall(
+      path: FogLedger_KeyImageStoreAPIClientMetadata.Methods.multiKeyImageStoreQuery.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultHTTPCallOptions
+    )
+  }
+}
+
+public final class FogLedger_KeyImageStoreAPIRestClient: FogLedger_KeyImageStoreAPIRestClientProtocol {
+  public var defaultHTTPCallOptions: HTTPCallOptions
+
+  /// Creates a client for the fog_ledger.KeyImageStoreAPI service.
+  ///
+  /// - Parameters:
+  ///   - defaultHTTPCallOptions: Options to use for each service call if the user doesn't provide them.
+  public init(
+    defaultHTTPCallOptions: HTTPCallOptions = HTTPCallOptions()
+  ) {
+    self.defaultHTTPCallOptions = defaultHTTPCallOptions
+  }
+}
+
+public enum FogLedger_KeyImageStoreAPIClientMetadata {
+  public static let serviceDescriptor = HTTPServiceDescriptor(
+    name: "KeyImageStoreAPI",
+    fullName: "fog_ledger.KeyImageStoreAPI",
+    methods: [
+      FogLedger_KeyImageStoreAPIClientMetadata.Methods.auth,
+      FogLedger_KeyImageStoreAPIClientMetadata.Methods.multiKeyImageStoreQuery,
+    ]
+  )
+
+  public enum Methods {
+    public static let auth = HTTPMethodDescriptor(
+      name: "Auth",
+      path: "/fog_ledger.KeyImageStoreAPI/Auth",
+      type: HTTPCallType.unary
+    )
+
+    public static let multiKeyImageStoreQuery = HTTPMethodDescriptor(
+      name: "MultiKeyImageStoreQuery",
+      path: "/fog_ledger.KeyImageStoreAPI/MultiKeyImageStoreQuery",
+      type: HTTPCallType.unary
+    )
+  }
+}
 
 /// Usage: instantiate `FogLedger_FogMerkleProofAPIRestClient`, then call methods of this protocol to make API calls.
 public protocol FogLedger_FogMerkleProofAPIRestClientProtocol: HTTPClient {

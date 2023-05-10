@@ -32,7 +32,7 @@ DASH:= -
 
 CARGO_PACKAGE = libmobilecoin
 
-ALL_ARCHS_IOS = aarch64-apple-ios-sim aarch64-apple-ios-macabi aarch64-apple-ios x86_64-apple-ios-macabi x86_64-apple-ios x86_64-apple-darwin
+ALL_ARCHS_IOS = aarch64-apple-ios-sim aarch64-apple-ios x86_64-apple-ios x86_64-apple-darwin
 
 IOS_LIB = libmobilecoin.a
 IOS_LIB_STRIPPED = libmobilecoin_stripped.a
@@ -68,7 +68,7 @@ LEGACY_CARGO_BUILD_FLAGS = $(CARGO_BUILD_FLAGS)
 
 .PHONY: setup
 setup:
-	rustup target add x86_64-apple-ios aarch64-apple-ios
+	rustup target add x86_64-apple-ios aarch64-apple-ios aarch64-apple-darwin x86_64-apple-darwin
 	rustup component add llvm-tools-preview rust-src
 	rustup run --install stable cargo install cargo-binutils
 	../tools/patch-cmake.sh

@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.name         = "LibMobileCoin"
-  s.version      = "4.1.3"
+  s.version      = "5.0.0-pre2"
   s.summary      = "A library for communicating with MobileCoin network"
 
   s.author       = "MobileCoin"
@@ -76,7 +76,7 @@ Pod::Spec.new do |s|
     "ENABLE_BITCODE" => "YES",
     # Mac Catalyst is not supported since tjis library includes a vendored binary
     # that only includes support for iOS archictures.
-    "SUPPORTS_MACCATALYST" => "YES",
+    "SUPPORTS_MACCATALYST" => "NO",
     # The vendored binary doesn't include support for 32-bit architectures or arm64
     # for iphonesimulator. This must be manually configured to avoid Xcode's default
     # setting of building 32-bit and Xcode 12's default setting of including the
@@ -91,13 +91,8 @@ Pod::Spec.new do |s|
     "CARGO_BUILD_TARGET[sdk=iphonesimulator*][arch=arm64]": "aarch64-apple-ios-sim",
     "CARGO_BUILD_TARGET[sdk=iphonesimulator*][arch=*]": "x86_64-apple-ios",
     "CARGO_BUILD_TARGET[sdk=iphoneos*]": "aarch64-apple-ios",
-
-    "CARGO_BUILD_TARGET_MAC_CATALYST_ARM_": "aarch64-apple-darwin",
-    "CARGO_BUILD_TARGET_MAC_CATALYST_ARM_YES": "aarch64-apple-ios-macabi",
-    "CARGO_BUILD_TARGET[sdk=macosx*][arch=arm64]": "$(CARGO_BUILD_TARGET_MAC_CATALYST_ARM_$(IS_MACCATALYST))",
-    "CARGO_BUILD_TARGET_MAC_CATALYST_X86_": "x86_64-apple-darwin",
-    "CARGO_BUILD_TARGET_MAC_CATALYST_X86_YES": "x86_64-apple-ios-macabi",
-    "CARGO_BUILD_TARGET[sdk=macosx*][arch=*]": "$(CARGO_BUILD_TARGET_MAC_CATALYST_X86_$(IS_MACCATALYST))",
+    "CARGO_BUILD_TARGET[sdk=macosx*][arch=arm64]": "aarch64-apple-darwin",
+    "CARGO_BUILD_TARGET[sdk=macosx*][arch=*]": "x86_64-apple-darwin",
 
     "VALID_ARCHS[sdk=iphoneos*]" => "arm64",
     "VALID_ARCHS[sdk=iphonesimulator*]" => "x86_64 arm64",
@@ -110,7 +105,7 @@ Pod::Spec.new do |s|
   # `user_target_xcconfig` should only be set when the setting needs to propogate to
   # all targets that depend on this library.
   s.user_target_xcconfig = {
-    "SUPPORTS_MACCATALYST" => "YES",
+    "SUPPORTS_MACCATALYST" => "NO",
     "EXCLUDED_ARCHS[sdk=iphoneos*]" => "armv7",
     "EXCLUDED_ARCHS[sdk=iphonesimulator*]" => "i386",
     "VALID_ARCHS[sdk=iphoneos*]" => "arm64",

@@ -12,7 +12,7 @@ use mc_attest_verifier::{MrEnclaveVerifier, MrSignerVerifier, Verifier, DEBUG_EN
 use mc_common::ResponderId;
 use mc_crypto_keys::X25519;
 use mc_crypto_noise::NoiseCipher;
-use mc_crypto_rand::McRng;
+use mc_rand::McRng;
 use mc_util_ffi::*;
 use sha2::Sha512;
 
