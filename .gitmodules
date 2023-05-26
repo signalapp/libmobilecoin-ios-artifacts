@@ -1,3 +1,6 @@
 [submodule "Vendor/mobilecoin"]
 	path = Vendor/mobilecoin
 	url = https://github.com/mobilecoinfoundation/mobilecoin.git
+[submodule "Vendor/misty-swap"]
+	path = Vendor/misty-swap
+	url = https://github.com/mobilecoinofficial/misty-swap.git
