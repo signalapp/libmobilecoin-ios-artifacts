@@ -44,6 +44,11 @@ public protocol Mistyswap_MistyswapOfframpApiClientProtocol: GRPCClient {
     _ request: Attest_Message,
     callOptions: CallOptions?
   ) -> UnaryCall<Attest_Message, Attest_Message>
+
+  func getOfframpDebugInfo(
+    _ request: Attest_Message,
+    callOptions: CallOptions?
+  ) -> UnaryCall<Attest_Message, Attest_Message>
 }
 
 extension Mistyswap_MistyswapOfframpApiClientProtocol {
@@ -107,6 +112,25 @@ extension Mistyswap_MistyswapOfframpApiClientProtocol {
       interceptors: self.interceptors?.makeGetOfframpStatusInterceptors() ?? []
     )
   }
+
+  //// Get debug info.
+  //// Input should be an encrypted GetOfframpDebugInfoRequest, output is an encrypted GetOfframpDebugInfoResponse.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to GetOfframpDebugInfo.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func getOfframpDebugInfo(
+    _ request: Attest_Message,
+    callOptions: CallOptions? = nil
+  ) -> UnaryCall<Attest_Message, Attest_Message> {
+    return self.makeUnaryCall(
+      path: "/mistyswap.MistyswapOfframpApi/GetOfframpDebugInfo",
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeGetOfframpDebugInfoInterceptors() ?? []
+    )
+  }
 }
 
 public protocol Mistyswap_MistyswapOfframpApiClientInterceptorFactoryProtocol {
@@ -119,6 +143,9 @@ public protocol Mistyswap_MistyswapOfframpApiClientInterceptorFactoryProtocol {
 
   /// - Returns: Interceptors to use when invoking 'getOfframpStatus'.
   func makeGetOfframpStatusInterceptors() -> [ClientInterceptor<Attest_Message, Attest_Message>]
+
+  /// - Returns: Interceptors to use when invoking 'getOfframpDebugInfo'.
+  func makeGetOfframpDebugInfoInterceptors() -> [ClientInterceptor<Attest_Message, Attest_Message>]
 }
 
 public final class Mistyswap_MistyswapOfframpApiClient: Mistyswap_MistyswapOfframpApiClientProtocol {

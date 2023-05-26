@@ -43,6 +43,11 @@ public protocol Mistyswap_MistyswapOfframpApiRestClientProtocol: HTTPClient {
     _ request: Attest_Message,
     callOptions: HTTPCallOptions?
   ) -> HTTPUnaryCall<Attest_Message, Attest_Message>
+
+  func getOfframpDebugInfo(
+    _ request: Attest_Message,
+    callOptions: HTTPCallOptions?
+  ) -> HTTPUnaryCall<Attest_Message, Attest_Message>
 }
 
 extension Mistyswap_MistyswapOfframpApiRestClientProtocol {
@@ -103,6 +108,24 @@ extension Mistyswap_MistyswapOfframpApiRestClientProtocol {
       callOptions: callOptions ?? self.defaultHTTPCallOptions
     )
   }
+
+  //// Get debug info.
+  //// Input should be an encrypted GetOfframpDebugInfoRequest, output is an encrypted GetOfframpDebugInfoResponse.
+  ///
+  /// - Parameters:
+  ///   - request: Request to send to GetOfframpDebugInfo.
+  ///   - callOptions: Call options.
+  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
+  public func getOfframpDebugInfo(
+    _ request: Attest_Message,
+    callOptions: HTTPCallOptions? = nil
+  ) -> HTTPUnaryCall<Attest_Message, Attest_Message> {
+    return self.makeUnaryCall(
+      path: Mistyswap_MistyswapOfframpApiClientMetadata.Methods.getOfframpDebugInfo.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultHTTPCallOptions
+    )
+  }
 }
 
 public final class Mistyswap_MistyswapOfframpApiRestClient: Mistyswap_MistyswapOfframpApiRestClientProtocol {
@@ -127,6 +150,7 @@ public enum Mistyswap_MistyswapOfframpApiClientMetadata {
       Mistyswap_MistyswapOfframpApiClientMetadata.Methods.initiateOfframp,
       Mistyswap_MistyswapOfframpApiClientMetadata.Methods.forgetOfframp,
       Mistyswap_MistyswapOfframpApiClientMetadata.Methods.getOfframpStatus,
+      Mistyswap_MistyswapOfframpApiClientMetadata.Methods.getOfframpDebugInfo,
     ]
   )
 
@@ -146,6 +170,12 @@ public enum Mistyswap_MistyswapOfframpApiClientMetadata {
     public static let getOfframpStatus = HTTPMethodDescriptor(
       name: "GetOfframpStatus",
       path: "/mistyswap.MistyswapOfframpApi/GetOfframpStatus",
+      type: HTTPCallType.unary
+    )
+
+    public static let getOfframpDebugInfo = HTTPMethodDescriptor(
+      name: "GetOfframpDebugInfo",
+      path: "/mistyswap.MistyswapOfframpApi/GetOfframpDebugInfo",
       type: HTTPCallType.unary
     )
   }
