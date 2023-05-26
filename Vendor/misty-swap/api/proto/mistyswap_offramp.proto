@@ -1,0 +1,219 @@
+// Copyright (c) 2018-2023 MobileCoin Inc.
+
+syntax = "proto3";
+
+package mistyswap;
+option go_package = "mistyswap/api";
+
+import "attest.proto";
+
+service MistyswapOfframpApi {
+    /// Initiate (or pick up a previously initiated) offramp.
+    /// Input should be an encrypted InitiateOfframpRequest, output is an encrypted InitiateOfframpResponse.
+    rpc InitiateOfframp(attest.Message) returns (attest.Message) {}
+
+    /// Forget an offramp.
+    /// Input should be an encrypted ForgetOfframpRequest, output is an encrypted ForgetOfframpResponse.
+    rpc ForgetOfframp(attest.Message) returns (attest.Message) {}
+
+    /// Get the status of an offramp.
+    /// Input should be an encrypted GetOfframpStatusRequest, output is an encrypted GetOfframpStatusResponse.
+    rpc GetOfframpStatus(attest.Message) returns (attest.Message) {}
+
+    /// Get debug info.
+    /// Input should be an encrypted GetOfframpDebugInfoRequest, output is an encrypted GetOfframpDebugInfoResponse.
+    rpc GetOfframpDebugInfo(attest.Message) returns (attest.Message) {}
+}
+
+/// Various possible offramp error codes.
+/// This should be kept in sync with mistyswap_offramp_api::Error
+/// The ORC prefix is needed since enum variants have to be unique across all enums in the file.
+enum OfframpResultCode {
+    ORC_INVALID = 0;
+    ORC_OK = 1;
+    ORC_TOO_MANY_OFFRAMPS = 2;
+    ORC_MIXIN_CREDENTIALS_JSON = 3;
+    ORC_OFFRAMP_ALREADY_IN_PROGRESS = 4;
+    ORC_MIXIN = 5;
+    ORC_INVALID_SRC_ASSET_ID = 6;
+    ORC_INVALID_DST_ASSET_ID = 7;
+    ORC_OFFRAMP_ID_NOT_FOUND = 8;
+    ORC_INVALID_SRC_EXPECTED_AMOUNT = 9;
+    ORC_INVALID_MIN_DST_RECEIVED_AMOUNT = 10;
+    ORC_INVALID_MAX_FEE_AMOUNT_IN_DST_TOKENS = 11;
+}
+
+/// A simplified GRPC-compatible wrapper for Result<_, mistyswap_offramp_api::Error>
+message OfframpResult {
+    OfframpResultCode code = 1;
+    string message = 2;
+
+    // For OfframAlreadyInProgress, this is the offramp_id of the existing offramp.
+    bytes offramp_id = 3;
+}
+
+/// Offramp parameters.
+/// They are separated from the credentials since they are not as sensitive, and it makes it
+/// easier to include them to the client in the response to GetOfframpStatus calls.
+message OfframpParams {
+    /// The asset being offramped (the token id we will be swapping from). This
+    /// would be MOB or eUSD. This is the mixin asset uuid.
+    string src_asset_id = 1;
+
+    /// The amount we are going to be swapping. We use  strings to allow
+    /// decimals.
+    string src_expected_amount = 2;
+
+    /// The Mixin destination asset id (the token id we will be swapping into).
+    /// This is the mixin asset uuid.
+    string dst_asset_id = 3;
+
+    /// The token-specific address to withdraw into.
+    string dst_address = 4;
+
+    /// The token-specific address tag, if any.
+    string dst_address_tag = 5;
+
+    /// The minimum amount of destination tokens we expect to receive from
+    /// swapping the source tokens. Note that this includes tokens that will
+    /// later be swapped for fees if the fee token is not the destination token.
+    string min_dst_received_amount = 6;
+
+    /// The maximum amount of destination tokens we are willing to use for fees.
+    string max_fee_amount_in_dst_tokens = 7;
+}
+
+/// A request to initiate an offramp.
+message InitiateOfframpRequest {
+    /// Mixin credentials, as a JSON string.
+    string mixin_credentials_json = 1;
+
+    /// Offramp parameters.
+    OfframpParams params = 2;
+}
+
+/// A successful response to an InitiateOfframpRequest.
+/// Since this is sent over an unencrypted channel, it should not contain anything sensitive.
+message InitiateOfframpResponse {
+    /// Result of the offramp request.
+    OfframpResult result = 1;
+
+    /// Unique ID derived from the offramp request (set if result code is Ok)
+    bytes offramp_id = 2;
+}
+
+/// A request to forget an offramp.
+message ForgetOfframpRequest {
+    /// Unique ID of the offramp to forget.
+    bytes offramp_id = 1;
+}
+
+/// A response to a ForgetOfframpRequest.
+message ForgetOfframpResponse {
+    /// Result of the offramp request.
+    OfframpResult result = 1;
+}
+
+/// Current offramp state.
+/// This should be kept in sync with offramp_impl::OfframpState
+/// The OS prefix is needed since enum variants have to be unique across all enums in the file.
+enum OfframpState {
+    OS_INVALID = 0;
+    OS_NOT_STARTED = 1;
+    OS_POLLING = 2;
+    OS_WAITING = 3;
+    OS_INVALID_WITHDRAWAL_ADDRESS = 4;
+    OS_INTERMITTENT_ERROR = 5;
+    OS_BLOCKED_ON_SWAP = 6;
+    OS_BLOCKED_ON_WITHDRAWAL = 7;
+    OS_WITHDRAWAL_COMPLETED = 8;
+    OS_UNRECOVERABLE_ERROR = 9;
+}
+
+/// On-going swap info.
+message OngoingSwap {
+    /// The Mixin trace ID of the swap.
+    string trace_id = 1;
+
+    /// The Mixin user ID of the swap.
+    string follow_id = 2;
+
+    /// Asset UUID we are swapping from.
+    string src_asset_id = 3;
+
+    /// Amount we are swapping (string since it can be decimal).
+    string src_amount = 4;
+
+    /// Asset UUID we are swapping to.
+    string dst_asset_id = 5;
+
+    /// Minimum amount we will accept, otherwise the swap gets rejected (string since it can be decimal).
+    string dst_amount_min = 6;
+
+    /// Mixin route hash ids.
+    string roush_hash_ids = 7;
+
+    /// The Mixin snapshot JSON blob.
+    string transfer_json = 8;
+
+    /// Our balance of the src asset before we sent the swap transaction.
+    string pre_swap_src_balance = 9;
+
+    /// Our balance of the dst asset before we sent the swap transaction.
+    string pre_swap_dst_balance = 10;
+}
+
+/// Details about a previously-initiated offramp.
+message Offramp {
+    /// The original offramp parameters.
+    OfframpParams params = 1;
+
+    /// Current state of the offramp.
+    OfframpState state = 2;
+
+    /// String details, if any, about the current state.
+    string state_details = 3;
+
+    /// The Mixin withdrawal address as a JSON blob (if available, empty string otherwise)
+    string mixin_withdrawal_address_json = 4;
+
+    /// Ongoing swap info, if any.
+    OngoingSwap ongoing_swap = 5;
+
+    /// Ongoing withdrawal info, if any. This is a Mixin snapshot JSON blob.
+    string ongoing_withdrawal_json = 6;
+
+    /// Balances (map of Mixin asset UUID to balance as a decimal number).
+    map<string, string> balances = 7;
+}
+
+/// Get the status of an offramp.
+message GetOfframpStatusRequest {
+    /// Unique ID of the offramp to get the status of.
+    bytes offramp_id = 1;
+}
+
+/// A response to a GetOfframpStatusRequest.
+message GetOfframpStatusResponse {
+    /// Result of the offramp request.
+    OfframpResult result = 1;
+
+    /// The offramp status, if the result code is Ok.
+    Offramp offramp = 2;
+}
+
+/// Get the state transitions of a given offramp (for debug purposes).
+message GetOfframpDebugInfoRequest {
+    /// Unique ID of the offramp to get the status of.
+    bytes offramp_id = 1;
+}
+
+/// A response to a GetOfframpDebugInfoRequest.
+message GetOfframpDebugInfoResponse {
+    /// Result of the offramp request.
+    OfframpResult result = 1;
+
+    /// Debug info, encoded as a JSON blob.
+    /// The schema is defined by the OfframpDebugInfo Rust struct and serialized by serde.
+    string debug_info_json = 2;
+}
