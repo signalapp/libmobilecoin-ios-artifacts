@@ -2,7 +2,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 name = "libmobilecoin"
-version = "5.0.0-pre2"
+version = "5.0.0"
 authors = ["MobileCoin"]
 edition = "2021"
 
