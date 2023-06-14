@@ -11,6 +11,7 @@
 #include "fog.h"
 #include "transaction.h"
 #include "bip39.h"
+#include "signed_contingent_input.h"
 #include "slip10.h"
 #include "chacha20_rng.h"
 

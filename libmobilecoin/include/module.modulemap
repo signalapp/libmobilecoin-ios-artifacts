@@ -1,0 +1,4 @@
+module LibMobileCoin {
+    header "libmobilecoin.h"
+    export *
+}

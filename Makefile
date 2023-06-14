@@ -3,7 +3,9 @@ LIBMOBILECOIN_LIB_DIR = libmobilecoin
 LIBMOBILECOIN_ARTIFACTS_DIR = $(LIBMOBILECOIN_LIB_DIR)/out/ios
 LIBMOBILECOIN_ARTIFACTS_HEADERS = $(LIBMOBILECOIN_LIB_DIR)/out/ios/include
 ARTIFACTS_DIR = Artifacts
-IOS_TARGETS = aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+TEST_VECTOR_DIR = Sources/TestVector
+IOS_TARGETS = aarch64-apple-ios-sim aarch64-apple-ios x86_64-apple-ios x86_64-apple-darwin aarch64-apple-darwin
+
 LIBMOBILECOIN_PROFILE = mobile-release
 
 define BINARY_copy
@@ -15,7 +17,7 @@ default: setup build clean-artifacts copy generate
 
 .PHONY: setup
 setup:
-	cd "$(LIBMOBILECOIN_LIB_DIR)"
+	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE) setup
 	bundle install
 
 # Unexport conditional environment variables so the build is more predictable
@@ -29,6 +31,10 @@ unexport CARGO_PROFILE
 build:
 	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE)
 
+.PHONY: framework
+framework:
+	cd "$(LIBMOBILECOIN_LIB_DIR)" && $(MAKE) xcframework
+
 .PHONY: clean-artifacts
 clean-artifacts:
 	rm -r "$(ARTIFACTS_DIR)" 2>/dev/null || true
@@ -38,16 +44,58 @@ clean-artifacts:
 	$(foreach arch,$(IOS_TARGETS),mkdir -p $(ARTIFACTS_DIR)/target/$(arch)/release;) 
 
 .PHONY: copy
-copy:
+copy: copy-libs generate-xcframework
+
+.PHONY: copy-libs
+copy-libs:
 	$(call BINARY_copy,target)
 	cp -R "$(LIBMOBILECOIN_ARTIFACTS_HEADERS)" "$(ARTIFACTS_DIR)"
 
 .PHONY: generate
-generate:
+generate: generate-test-vectors generate-protoc 
+
+.PHONY: generate-protoc
+generate-protoc:
 	rm -r Sources/Generated/Proto 2>/dev/null || true
 	DOCKER_BUILDKIT=1 docker build . \
 		--build-arg grpc_swift_version=1.0.0 \
 		--output .
+
+.PHONY: generate-test-vectors
+generate-test-vectors:
+	rm -rf $(TEST_VECTOR_DIR)/vectors
+	cp -R $(MOBILECOIN_DIR)/test-vectors/vectors $(TEST_VECTOR_DIR)
+	cd $(TEST_VECTOR_DIR)/vectors && find . -type f -name '*.jsonl' -exec mv -fi '{}' ./ ';'
+	cd $(TEST_VECTOR_DIR)/vectors && find .  -mindepth 1 -maxdepth 1 -type d -exec rm -rf '{}' ';'
+
+.PHONY: generate-xcframework
+generate-xcframework:
+	rm -rf Artifacts/LibMobileCoinLibrary.xcframework || true
+	rm libmobilecoin/out/ios/target/libmobilecoin_macos.a || true
+	rm libmobilecoin/out/ios/target/libmobilecoin_iossimulator.a || true
+	mkdir -p .build/headers
+	cp Artifacts/include/* .build/headers
+	cp modulemap/module.modulemap .build/headers
+	mkdir -p libmobilecoin/out/ios/target
+	lipo -create \
+		$(ARTIFACTS_DIR)/target/x86_64-apple-darwin/release/libmobilecoin.a \
+		$(ARTIFACTS_DIR)/target/aarch64-apple-darwin/release/libmobilecoin.a \
+		-output $(LIBMOBILECOIN_ARTIFACTS_DIR)/target/libmobilecoin_macos.a
+	lipo -create \
+		$(ARTIFACTS_DIR)/target/x86_64-apple-ios/release/libmobilecoin.a \
+		$(ARTIFACTS_DIR)/target/aarch64-apple-ios-sim/release/libmobilecoin.a \
+		-output $(LIBMOBILECOIN_ARTIFACTS_DIR)/target/libmobilecoin_iossimulator.a
+	rm -rf $(LIBMOBILECOIN_ARTIFACTS_DIR)/LibMobileCoinLibrary.xcframework
+	xcodebuild -create-xcframework \
+		-library $(LIBMOBILECOIN_ARTIFACTS_DIR)/target/libmobilecoin_macos.a \
+		-headers .build/headers \
+		-library $(LIBMOBILECOIN_ARTIFACTS_DIR)/target/libmobilecoin_iossimulator.a \
+		-headers .build/headers \
+		-library $(ARTIFACTS_DIR)/target/aarch64-apple-ios/release/libmobilecoin.a \
+		-headers .build/headers \
+		-output $(ARTIFACTS_DIR)/LibMobileCoinLibrary.xcframework
+	rm -rf .build/headers
+
 
 .PHONY: lint
 lint: lint-podspec
@@ -64,7 +112,9 @@ publish-hotfix: tag-hotfix publish-podspec
 .PHONY: push-generated
 push-generated:
 	git add Artifacts/*
-	git add Sources/Generated/Proto/*
+	git add Sources/GRPC
+	git add Sources/HTTP
+	git add Sources/Common
 	if ! git diff-index --quiet HEAD; then \
 		git commit -m '[skip ci] commit build Artifacts and generated protos from build machine'; \
 		git push origin HEAD; \
@@ -100,6 +150,11 @@ lint-podspec:
 publish-podspec:
 	bundle exec pod trunk push LibMobileCoin.podspec --allow-warnings
 
+.PHONY: clean
+clean:
+	$(MAKE) -C libmobilecoin clean
+	@rm -r $(MOBILECOIN_DIR)/target 2>/dev/null || true
+
 .PHONY: patch-cmake
 patch-cmake:
 	tools/patch-cmake.sh
@@ -108,8 +163,6 @@ patch-cmake:
 unpatch-cmake:
 	tools/unpatch-cmake.sh
 
-.PHONY: clean
-clean:
-	$(MAKE) -C libmobilecoin clean
-	@rm -r $(MOBILECOIN_DIR)/target 2>/dev/null || true
-
+.PHONY: test-spm
+test-spm:
+	cd LibMobileCoinExample && swift package reset && swift test

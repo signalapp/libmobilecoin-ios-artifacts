@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.name         = "LibMobileCoin"
-  s.version      = "5.0.0"
+  s.version      = "5.0.2"
   s.summary      = "A library for communicating with MobileCoin network"
 
   s.author       = "MobileCoin"
@@ -26,24 +26,30 @@ Pod::Spec.new do |s|
   s.default_subspecs = "Core"
 
    s.subspec "TestVectors" do |subspec|
-     subspec.source_files = "Sources/TestVector/**/*.swift"
+     subspec.source_files = [
+       "Sources/TestVector/Util/Bundle+TestVector.swift",
+       "Sources/TestVector/Util/TestVectorError.swift"
+     ]
+
      subspec.preserve_paths = [
-       'Artifacts/**/libmobilecoin.a',
+       'Artifacts/target/**/libmobilecoin.a',
      ]
      subspec.resources = [
-       "Vendor/mobilecoin/test-vectors/vectors/**/*.*",
+       "Sources/TestVector/vectors/*.*",
      ]
    end
 
    s.subspec "Core" do |subspec|
      subspec.preserve_paths = [
-       'Artifacts/**/libmobilecoin.a',
+       'Artifacts/target/**/libmobilecoin.a',
      ]
  
      subspec.source_files = [
        "Artifacts/include/*.h",
-       "Sources/Generated/Proto/*.{grpc,pb,http}.swift",
-       "Sources/Interface/*.swift",
+       "Sources/HTTP/*.{http}.swift",
+       "Sources/HTTP/Interface/*.swift",
+       "Sources/GRPC/*.{grpc}.swift",
+       "Sources/Common/*.{pb}.swift",
      ]
  
      subspec.dependency "gRPC-Swift"
@@ -57,10 +63,26 @@ Pod::Spec.new do |s|
  
      subspec.source_files = [
        "Artifacts/include/*.h",
-       "Sources/Generated/Proto/*.{pb,http}.swift",
-       "Sources/Interface/*.swift",
+       "Sources/HTTP/*.{http}.swift",
+       "Sources/HTTP/Interface/*.swift",
+       "Sources/Common/*.{pb}.swift",
      ]
  
+     subspec.dependency "SwiftProtobuf", "~> 1.5"
+   end
+
+   s.subspec "CoreGRPC" do |subspec|
+     subspec.preserve_paths = [
+       'Artifacts/target/**/libmobilecoin.a',
+     ]
+ 
+     subspec.source_files = [
+       "Artifacts/include/*.h",
+       "Sources/GRPC/*.{grpc}.swift",
+       "Sources/Common/*.{pb}.swift",
+     ]
+ 
+     subspec.dependency "gRPC-Swift"
      subspec.dependency "SwiftProtobuf", "~> 1.5"
    end
 

@@ -1,3 +1,4 @@
+---
 version: 2.1
 
 defaults:
@@ -649,7 +650,9 @@ jobs:
       - restore-build-artifact-cache:
           build-target: x86_64-apple-ios 
       - restore-build-artifact-cache:
-          build-target: x86_64-apple-ios-darwin 
+          build-target: x86_64-apple-darwin 
+      - restore-build-artifact-cache:
+          build-target: aarch64-apple-darwin 
       - restore-build-artifact-headers-cache
       - run:
           name: Copy Artifacts 
@@ -676,6 +679,11 @@ jobs:
           command: |
             rm -rf Artifacts
             cp -R /tmp/workspace/Artifacts ./
+      - run:
+          name: Install git-lfs
+          command: |
+            sudo apt install git-lfs
+            git lfs install
       - run:
           name: make generate (proto -> grpc swift) 
           command: |
@@ -796,6 +804,14 @@ workflows:
             parameters:
               xcode-version: [*default-xcode-version]
 
+      # apple-silicon-macos
+      - build-artifacts:
+          name: build-artifacts-m1-macos-xcode-<< matrix.xcode-version >>
+          build-target: "aarch64-apple-darwin"
+          matrix:
+            parameters:
+              xcode-version: [*default-xcode-version]
+
       - copy-artifacts:
           name: copy-artifacats
           requires:
@@ -803,6 +819,7 @@ workflows:
             - build-artifacts-ios-device-xcode-<< matrix.xcode-version >>
             - build-artifacts-intel-ios-sim-xcode-<< matrix.xcode-version >>
             - build-artifacts-intel-macos-xcode-<< matrix.xcode-version >>
+            - build-artifacts-m1-macos-xcode-<< matrix.xcode-version >>
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
