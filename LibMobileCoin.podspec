@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
 
   s.name         = "LibMobileCoin"
-  s.version      = "5.0.2"
+  s.version      = "5.0.3"
   s.summary      = "A library for communicating with MobileCoin network"
 
   s.author       = "MobileCoin"
@@ -58,7 +58,7 @@ Pod::Spec.new do |s|
 
    s.subspec "CoreHTTP" do |subspec|
      subspec.preserve_paths = [
-       'Artifacts/**/libmobilecoin.a',
+       'Artifacts/target/**/libmobilecoin.a',
      ]
  
      subspec.source_files = [
