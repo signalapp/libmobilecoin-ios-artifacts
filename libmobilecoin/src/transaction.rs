@@ -15,24 +15,23 @@ use mc_crypto_keys::{CompressedRistrettoPublic, ReprBytes, RistrettoPrivate, Ris
 use mc_crypto_ring_signature_signer::NoKeysRingSigner;
 use mc_fog_report_resolver::FogResolver;
 use mc_transaction_builder::{
-    GiftCodeCancellationMemoBuilder,
-    GiftCodeFundingMemoBuilder, GiftCodeSenderMemoBuilder, InputCredentials,
-    MemoBuilder, RTHMemoBuilder, ReservedSubaddresses,
-    TransactionBuilder,
+    GiftCodeCancellationMemoBuilder, GiftCodeFundingMemoBuilder, GiftCodeSenderMemoBuilder,
+    InputCredentials, MemoBuilder, RTHMemoBuilder, ReservedSubaddresses, TransactionBuilder,
 };
 use mc_transaction_core::{
     get_tx_out_shared_secret,
     onetime_keys::{recover_onetime_private_key, recover_public_subaddress_spend_key},
     ring_signature::KeyImage,
     tx::{TxOut, TxOutMembershipProof},
-    Amount, BlockVersion, CompressedCommitment, EncryptedMemo, MaskedAmount, MemoPayload, TokenId,
+    Amount, BlockVersion, CompressedCommitment, EncryptedMemo, MaskedAmount, MaskedAmountV1,
+    MaskedAmountV2, MemoPayload, TokenId,
 };
 use mc_transaction_extra::{
     AuthenticatedSenderMemo, AuthenticatedSenderWithPaymentIntentIdMemo,
     AuthenticatedSenderWithPaymentRequestIdMemo, DestinationMemo,
     DestinationWithPaymentIntentIdMemo, DestinationWithPaymentRequestIdMemo,
-    GiftCodeCancellationMemo, GiftCodeFundingMemo, GiftCodeSenderMemo,
-    SenderMemoCredential, SignedContingentInput, TxOutConfirmationNumber,
+    GiftCodeCancellationMemo, GiftCodeFundingMemo, GiftCodeSenderMemo, SenderMemoCredential,
+    SignedContingentInput, TxOutConfirmationNumber,
 };
 use mc_util_ffi::*;
 
@@ -46,7 +45,7 @@ pub enum McMaskedAmountVersion {
 
 #[repr(C)]
 pub struct McTxOutMaskedAmount<'a> {
-    /// 32-byte `CompressedCommitment`
+    /// `masked_value = value XOR_8 Blake2B(value_mask | shared_secret)`
     masked_value: u64,
 
     /// `masked_token_id = token_id XOR_8 Blake2B(token_id_mask |
@@ -291,6 +290,49 @@ pub extern "C" fn mc_tx_out_get_amount(
                 *out_amount.into_mut() = McTxOutAmount::from(amount);
             }
         }
+        Ok(())
+    })
+}
+
+/// # Preconditions
+///
+/// * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
+///
+/// # Errors
+///
+/// * `LibMcError::InvalidInput`
+/// * `LibMcError::TransactionCrypto`
+#[no_mangle]
+pub extern "C" fn mc_tx_out_view_key_match(
+    tx_out_masked_amount: FfiRefPtr<McTxOutMaskedAmount>,
+    tx_out_masked_amount_commitment: FfiMutPtr<McBuffer>,
+    tx_out_public_key: FfiRefPtr<McBuffer>,
+    view_private_key: FfiRefPtr<McBuffer>,
+    out_amount: FfiMutPtr<McTxOutAmount>,
+    out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
+) -> bool {
+    ffi_boundary_with_error(out_error, || {
+        let commitment = CompressedCommitment::try_from_ffi(&tx_out_masked_amount_commitment)?;
+        let tx_out_public_key = RistrettoPublic::try_from_ffi(&tx_out_public_key)?;
+        let view_private_key = RistrettoPrivate::try_from_ffi(&view_private_key)?;
+
+        let tx_out_shared_secret = get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
+
+        let masked_amount = match tx_out_masked_amount.masked_amount_version {
+            McMaskedAmountVersion::V1 => MaskedAmount::V1(MaskedAmountV1 {
+                commitment,
+                masked_value: tx_out_masked_amount.masked_value,
+                masked_token_id: tx_out_masked_amount.masked_token_id.to_vec(),
+            }),
+            McMaskedAmountVersion::V2 => MaskedAmount::V2(MaskedAmountV2 {
+                commitment,
+                masked_value: tx_out_masked_amount.masked_value,
+                masked_token_id: tx_out_masked_amount.masked_token_id.to_vec(),
+            }),
+        };
+        let (amount, _) = masked_amount.get_value(&tx_out_shared_secret)?;
+        *out_amount.into_mut() = McTxOutAmount::from(amount);
+
         Ok(())
     })
 }
@@ -2330,7 +2372,7 @@ pub extern "C" fn mc_memo_gift_code_cancellation_memo_get_fee(
 ///
 /// * `encrypted_memo` - must be 66 bytes
 /// * `tx_out_public_key` - must be a valid 32-byte Ristretto-format scalar.
-/// * `account_key` - must be a valid account key
+/// * `view_private_key` - must be a valid 32-byte RistrettoPrivate.
 /// * `out_memo_payload` - length must be >= 16 bytes
 ///
 /// # Errors
@@ -2340,17 +2382,15 @@ pub extern "C" fn mc_memo_gift_code_cancellation_memo_get_fee(
 pub extern "C" fn mc_memo_decrypt_e_memo_payload(
     encrypted_memo: FfiRefPtr<McBuffer>,
     tx_out_public_key: FfiRefPtr<McBuffer>,
-    account_key: FfiRefPtr<McAccountKey>,
+    view_private_key: FfiRefPtr<McBuffer>,
     out_memo_payload: FfiMutPtr<McMutableBuffer>,
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
 ) -> bool {
     ffi_boundary_with_error(out_error, || {
         let tx_out_public_key = RistrettoPublic::try_from_ffi(&tx_out_public_key)?;
-        let account_key_obj =
-            AccountKey::try_from_ffi(&account_key).expect("account_key is invalid");
+        let view_private_key = RistrettoPrivate::try_from_ffi(&view_private_key)?;
         let e_memo = EncryptedMemo::try_from_ffi(&encrypted_memo)?;
-        let shared_secret =
-            get_tx_out_shared_secret(&*account_key_obj.view_private_key(), &tx_out_public_key);
+        let shared_secret = get_tx_out_shared_secret(&view_private_key, &tx_out_public_key);
 
         let memo_payload: MemoPayload = e_memo.decrypt(&shared_secret);
         let memo_payload_generic_array: GenericArray<u8, U66> = memo_payload.into();

@@ -10,8 +10,8 @@ use mc_crypto_keys::KeyError;
 use mc_crypto_noise::CipherError;
 use mc_fog_kex_rng::Error as FogKexRngError;
 use mc_fog_report_validation::FogPubkeyError;
-use mc_transaction_core::{AmountError, BlockVersionError};
 use mc_transaction_builder::TxBuilderError;
+use mc_transaction_core::{AmountError, BlockVersionError};
 use mc_util_serial::DecodeError;
 use protobuf::ProtobufError;
 use std::{os::raw::c_int, sync::PoisonError};
@@ -26,6 +26,7 @@ impl From<LibMcError> for McError {
 pub enum LibMcError {
     /// Unknown
     Unknown,
+
     /// Rust panicked: {0}
     Panic(String),
 
@@ -195,8 +196,7 @@ impl From<ProtobufError> for LibMcError {
 
 impl From<TxBuilderError> for LibMcError {
     fn from(err: TxBuilderError) -> Self {
-        if let TxBuilderError::FogPublicKey(FogPubkeyError::IngestReport(_)) = err
-        {
+        if let TxBuilderError::FogPublicKey(FogPubkeyError::IngestReport(_)) = err {
             LibMcError::AttestationVerificationFailed(format!("{:?}", err))
         } else {
             LibMcError::InvalidInput(format!("{:?}", err))
@@ -211,7 +211,9 @@ impl From<FogPubkeyError> for LibMcError {
             | FogPubkeyError::Url(_)
             | FogPubkeyError::Deserialization(_) => LibMcError::InvalidInput(err.to_string()),
 
-            FogPubkeyError::IngestReport(_) => LibMcError::AttestationVerificationFailed(err.to_string()),
+            FogPubkeyError::IngestReport(_) => {
+                LibMcError::AttestationVerificationFailed(err.to_string())
+            }
 
             _ => LibMcError::FogPubkey(err.to_string()),
         }

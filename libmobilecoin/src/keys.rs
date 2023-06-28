@@ -1,7 +1,9 @@
 // Copyright (c) 2018-2022 The MobileCoin Foundation
 
 use crate::{common::*, LibMcError};
-use mc_account_keys::{AccountKey, PublicAddress, RootIdentity, ShortAddressHash};
+use mc_account_keys::{
+    burn_address_view_private, AccountKey, PublicAddress, RootIdentity, ShortAddressHash,
+};
 use mc_crypto_keys::{ReprBytes, RistrettoPrivate, RistrettoPublic};
 use mc_util_ffi::*;
 
@@ -251,4 +253,26 @@ impl<'a> TryFromFfi<&McPublicAddress<'a>> for PublicAddress {
             Ok(PublicAddress::new(&spend_public_key, &view_public_key))
         }
     }
+}
+
+/* ==== Burn Address ==== */
+
+/// # Preconditions
+///
+/// * `out_view_private_key` - length must be >= 32.
+#[no_mangle]
+pub extern "C" fn mc_get_burn_address_view_private(
+    out_view_private_key: FfiMutPtr<McMutableBuffer>,
+) -> bool {
+    ffi_boundary(|| {
+        let view_private = burn_address_view_private();
+        let burn_address_bytes = view_private.to_bytes();
+
+        let out_view_private_key = out_view_private_key
+            .into_mut()
+            .as_slice_mut_of_len(core::mem::size_of_val(&burn_address_bytes))
+            .expect("out_view_private_key length is insufficient");
+
+        out_view_private_key.copy_from_slice(&burn_address_bytes);
+    })
 }

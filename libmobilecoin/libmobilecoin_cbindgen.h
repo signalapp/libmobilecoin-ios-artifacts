@@ -45,6 +45,8 @@ typedef struct Option_SignedContingentInputBuilder_FogResolver Option_SignedCont
 
 typedef struct Option_TransactionBuilder_FogResolver Option_TransactionBuilder_FogResolver;
 
+typedef struct Vec_BlockData Vec_BlockData;
+
 typedef struct Vec_u8 Vec_u8;
 
 typedef struct Vec_u8 McData;
@@ -153,7 +155,7 @@ typedef struct Option_SignedContingentInputBuilder_FogResolver McSignedContingen
 
 typedef struct McTxOutMaskedAmount {
   /**
-   * 32-byte `CompressedCommitment`
+   * `masked_value = value XOR_8 Blake2B(value_mask | shared_secret)`
    */
   uint64_t masked_value;
   /**
@@ -171,6 +173,12 @@ typedef struct McTxOutAmount {
 } McTxOutAmount;
 
 typedef struct Option_TransactionBuilder_FogResolver McTransactionBuilder;
+
+typedef LightClientVerifier McLightClientVerifier;
+
+typedef struct Vec_BlockData McBlockDataVec;
+
+typedef BlockData McBlockData;
 
 void mc_data_free(FfiOptOwnedPtr<McData> data);
 
@@ -725,6 +733,13 @@ bool mc_account_key_get_short_address_hash(FfiRefPtr<McPublicAddress> public_add
                                            FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
 
 /**
+ * # Preconditions
+ *
+ * * `out_view_private_key` - length must be >= 32.
+ */
+bool mc_get_burn_address_view_private(FfiMutPtr<McMutableBuffer> out_view_private_key);
+
+/**
  *
  * # Errors
  *
@@ -907,6 +922,23 @@ bool mc_tx_out_get_amount(FfiRefPtr<McTxOutMaskedAmount> tx_out_masked_amount,
                           FfiRefPtr<McBuffer> view_private_key,
                           FfiMutPtr<McTxOutAmount> out_amount,
                           FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
+
+/**
+ * # Preconditions
+ *
+ * * `view_private_key` - must be a valid 32-byte Ristretto-format scalar.
+ *
+ * # Errors
+ *
+ * * `LibMcError::InvalidInput`
+ * * `LibMcError::TransactionCrypto`
+ */
+bool mc_tx_out_view_key_match(FfiRefPtr<McTxOutMaskedAmount> tx_out_masked_amount,
+                              FfiMutPtr<McBuffer> tx_out_masked_amount_commitment,
+                              FfiRefPtr<McBuffer> tx_out_public_key,
+                              FfiRefPtr<McBuffer> view_private_key,
+                              FfiMutPtr<McTxOutAmount> out_amount,
+                              FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
 
 /**
  * # Preconditions
@@ -1784,3 +1816,24 @@ bool mc_memo_decrypt_e_memo_payload(FfiRefPtr<McBuffer> encrypted_memo,
                                     FfiRefPtr<McAccountKey> account_key,
                                     FfiMutPtr<McMutableBuffer> out_memo_payload,
                                     FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
+
+FfiOptOwnedPtr<McLightClientVerifier> mc_light_client_verifier_create(FfiStr config_json,
+                                                                      FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
+
+void mc_light_client_verifier_free(FfiOptOwnedPtr<McLightClientVerifier> lcv);
+
+bool mc_light_client_verifier_verify_block_data_vec(FfiRefPtr<McLightClientVerifier> lcv,
+                                                    FfiRefPtr<McBlockDataVec> block_data_vec,
+                                                    FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
+
+FfiOptOwnedPtr<McBlockData> mc_block_data_from_archive_block_protobuf(FfiRefPtr<McBuffer> archive_block_protobuf,
+                                                                      FfiOptMutPtr<FfiOptOwnedPtr<McError>> out_error);
+
+void mc_block_data_free(FfiOptOwnedPtr<McBlockData> block_data);
+
+FfiOptOwnedPtr<McBlockDataVec> mc_block_data_vec_create(void);
+
+void mc_block_data_vec_free(FfiOptOwnedPtr<McBlockDataVec> block_data_vec);
+
+bool mc_block_data_vec_add_element(FfiMutPtr<McBlockDataVec> block_data_vec,
+                                   FfiRefPtr<McBlockData> block_data);
