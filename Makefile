@@ -111,12 +111,11 @@ publish-hotfix: tag-hotfix publish-podspec
 
 .PHONY: push-generated
 push-generated:
-	git add Artifacts/*
 	git add Sources/GRPC
 	git add Sources/HTTP
 	git add Sources/Common
 	if ! git diff-index --quiet HEAD; then \
-		git commit -m '[skip ci] commit build Artifacts and generated protos from build machine'; \
+		git commit -m '[skip ci] commit generated protos from build machine'; \
 		git push origin HEAD; \
 	fi
 

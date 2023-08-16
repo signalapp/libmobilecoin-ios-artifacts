@@ -36,7 +36,7 @@ commands:
     steps:
       - run:
           name: Version Info
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin/Vendor/mobilecoin
           command: |
             set -x
 
@@ -56,7 +56,7 @@ commands:
     steps:
       - run:
           name: Configure Cargo to use git cli
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin/Vendor/mobilecoin
           command: |
             mkdir -p ~/.cargo
             echo '[net]' >> ~/.cargo/config
@@ -74,31 +74,34 @@ commands:
 
   restore-homebrew-cache:
     steps:
-      - restore_cache:
-          name: Restore Homebrew cache
-          key: v1-homebrew-{{ arch }}
+      #- restore_cache:
+          #name: Restore Homebrew cache
+          #keys: 
+            #v1-homebrew-{{ arch }}-{{ .Revision }}
+            #v1-homebrew-{{ arch }}-
       - run:
           name: Update Homebrew
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin/Vendor/mobilecoin
           command: |
             brew --version
-            brew update --preinstall
-            brew --version
+            #brew --version
       - run:
           name: Install Homebrew dependencies
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin/Vendor/mobilecoin
           command: |
             rm '/usr/local/lib/python3.9/site-packages/six.py'
+            brew update-reset
             brew install llvm
             brew install ninja
             brew install pkg-config
             brew bundle --no-upgrade
+      #- save-homebrew-cache
 
   save-homebrew-cache:
     steps:
       - run:
           name: Prepare Homebrew cache for saving
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin/Vendor/mobilecoin
           command: |
             # Make sure latest versions are installed
             time brew bundle
@@ -109,7 +112,7 @@ commands:
             brew info
       - save_cache:
           name: Save Homebrew cache
-          key: v0-homebrew-{{ arch }}-{{ .Revision }}
+          key: v1-homebrew-{{ arch }}-{{ .Revision }}
           paths:
             - /usr/local/Cellar
 
@@ -163,7 +166,7 @@ commands:
       - restore_cache:
           name: Restore build artifact libmobilecoin.a cache for target <<parameters.build-target>>
           keys: 
-            - v2-build-artifact-<<parameters.build-target>>-{{ checksum "libmobilecoin_and_vendor_mobilecoin.hash" }}
+            - v2-build-artifact-<<parameters.build-target>>-{{ checksum "libmobilecoin/libmobilecoin_and_vendor_mobilecoin.hash" }}
 
   save-build-artifact-cache:
     parameters:
@@ -174,9 +177,9 @@ commands:
       - print-mobilecoin-submodule-hash
       - save_cache:
           name: Save build artifact libmobilecoin.a cache for target <<parameters.build-target>>
-          key: v2-build-artifact-<<parameters.build-target>>-{{ checksum "libmobilecoin_and_vendor_mobilecoin.hash" }}
+          key: v2-build-artifact-<<parameters.build-target>>-{{ checksum "libmobilecoin/libmobilecoin_and_vendor_mobilecoin.hash" }}
           paths:
-            - ~/project/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release
+            - libmobilecoin/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release
 
   #
   # LibMobileCoin Headers
@@ -187,16 +190,16 @@ commands:
       - restore_cache:
           name: Restore build artifact headers cache
           keys: 
-            - v2-build-artifact-headers-{{ checksum "libmobilecoin_and_vendor_mobilecoin.hash" }}
+            - v2-build-artifact-headers-{{ checksum "libmobilecoin/libmobilecoin_and_vendor_mobilecoin.hash" }}
 
   save-build-artifact-headers-cache:
     steps:
       - print-mobilecoin-submodule-hash
       - save_cache:
           name: Save build artifact headers cache
-          key: v2-build-artifact-headers-{{ checksum "libmobilecoin_and_vendor_mobilecoin.hash" }}
+          key: v2-build-artifact-headers-{{ checksum "libmobilecoin/libmobilecoin_and_vendor_mobilecoin.hash" }}
           paths:
-            - ~/project/libmobilecoin/out/ios/include
+            - libmobilecoin/libmobilecoin/out/ios/include
 
   #
   # Rustup Toolchain Cache's
@@ -210,7 +213,7 @@ commands:
       - restore_cache:
           name: Restore Rustup cache for target <<parameters.build-target>>
           keys: 
-            - v0-rustup-<<parameters.build-target>>-{{ checksum "libmobilecoin/toolchain-config.env" }}
+            - v0-rustup-<<parameters.build-target>>-{{ checksum "libmobilecoin/libmobilecoin/toolchain-config.env" }}
 
   save-rustup-cache:
     parameters:
@@ -220,7 +223,7 @@ commands:
     steps:
       - save_cache:
           name: Save Rustup cache for target aarch64-apple-ios-sim
-          key: v0-rustup-<<parameters.build-target>>-{{ checksum "libmobilecoin/toolchain-config.env" }}
+          key: v0-rustup-<<parameters.build-target>>-{{ checksum "libmobilecoin/libmobilecoin/toolchain-config.env" }}
           paths:
             - ~/.rustup/toolchains
 
@@ -241,7 +244,7 @@ commands:
     steps:
       - run:
           name: Fetch project Cargo dependencies
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin/Vendor/mobilecoin
           command: |
             set -x
             time cargo fetch --locked
@@ -255,7 +258,6 @@ commands:
       cbindgen: { type: boolean, default: false }
       os: { type: enum, enum: [ "linux", "macos", "windows" ], default: linux }
     steps:
-      - checkout
       - when:
           condition: { equal: [ << parameters.os >>, macos ] }
           steps: [ restore-homebrew-cache ]
@@ -265,15 +267,22 @@ commands:
       - prefetch-cargo-deps
 
   #
-  # libmobilecoin-ios-artifacts cocoapods lint/spec publish
+  # libmobilecoin cocoapods lint/spec publish
   #
+  init-artifacts-submodule:
+    description: Initialize artifacts submodule
+    steps:
+      - run:
+          name: Run git submodule update --init
+          working_directory: libmobilecoin
+          command: git submodule update --init --depth 1 Artifacts
 
   init-mobilecoin-submodule:
     description: Initialize mobilecoin submodule
     steps:
       - run:
           name: Run git submodule update --init
-          working_directory: Vendor/mobilecoin
+          working_directory: libmobilecoin/Vendor/mobilecoin
           command: git submodule update --init --depth 1 --recursive
 
   print-mobilecoin-submodule-hash:
@@ -281,14 +290,15 @@ commands:
     steps:
       - run:
           name: Save submodule hash to file for checksumming
+          working_directory: libmobilecoin
           command: |
-            cat <(git submodule status) <(git ls-files -s libmobilecoin | git hash-object --stdin) > libmobilecoin_and_vendor_mobilecoin.hash
-
+            cat <(git submodule status Vendor/mobilecoin) <(git ls-files -s libmobilecoin | git hash-object --stdin) > libmobilecoin_and_vendor_mobilecoin.hash
   print-tool-versions:
     description: Print versions of various tools used
     steps:
       - run:
           name: Print tool versions
+          working_directory: libmobilecoin
           command: |
             set -x
             brew config
@@ -321,10 +331,11 @@ commands:
       - restore_cache:
           name: Restore Ruby gem cache
           keys:
-            - v0-ruby-<< parameters.ruby-version >>-gems-{{ checksum "Gemfile.lock" }}
+            - v0-ruby-<< parameters.ruby-version >>-gems-{{ checksum "libmobilecoin/Gemfile.lock" }}
             - v0-ruby-<< parameters.ruby-version >>-gems-
       - run:
           name: Install root bundler dependencies
+          working_directory: libmobilecoin
           command: |
             bundle config set --local deployment 'true'
             bundle config set --local path '.vendor/bundle'
@@ -332,9 +343,9 @@ commands:
             bundle check || bundle install
       - save_cache:
           name: Save Ruby gem cache
-          key: v0-ruby-<< parameters.ruby-version >>-gems-{{ checksum "Gemfile.lock" }}
+          key: v0-ruby-<< parameters.ruby-version >>-gems-{{ checksum "libmobilecoin/Gemfile.lock" }}
           paths:
-            - .vendor/bundle
+            - libmobilecoin/.vendor/bundle
 
   # 
   # MobileCoin-Swift for testing
@@ -502,9 +513,9 @@ commands:
           name: Clone current branch of LibMobileCoin and its submodules
           working_directory: ~/MobileCoin-Swift
           command: |
-            mkdir -p Vendor/libmobilecoin-ios-artifacts
-            git clone --branch ${CIRCLE_BRANCH} ${CIRCLE_REPOSITORY_URL} Vendor/libmobilecoin-ios-artifacts
-            cd Vendor/libmobilecoin-ios-artifacts
+            mkdir -p Vendor/libmobilecoin
+            git clone --branch ${CIRCLE_BRANCH} ${CIRCLE_REPOSITORY_URL} Vendor/libmobilecoin 
+            cd Vendor/libmobilecoin
             git submodule update --init --recursive --depth 1
 
 
@@ -513,6 +524,17 @@ commands:
     steps:
       - run:
           name: Set git credentials
+          working_directory: libmobilecoin
+          command: |
+            git config user.email "mobilecoin-ci@mobilecoin.com"
+            git config user.name "mobilecoin-ci"
+
+  set-artifacts-git-credentials:
+    description: Set git credentials
+    steps:
+      - run:
+          name: Set Artifacts git credentials
+          working_directory: libmobilecoin/Artifacts
           command: |
             git config user.email "mobilecoin-ci@mobilecoin.com"
             git config user.name "mobilecoin-ci"
@@ -521,6 +543,7 @@ commands:
     steps:
       - run:
           name: Lint podspec locally
+          working_directory: libmobilecoin
           command: make lint-locally
 
   publish-to-trunk:
@@ -530,6 +553,7 @@ commands:
             - "16:4d:90:f0:c4:2b:2e:ac:96:7b:6b:8b:e0:ce:72:28"
       - run:
           name: Publish Pod to Trunk
+          working_directory: libmobilecoin
           command: make publish
 
   make-push-generated:
@@ -539,12 +563,14 @@ commands:
             - "0b:63:05:5c:f9:37:25:a8:85:7a:8e:2c:8d:96:1a:39"
       - run:
           name: Push generated to remote
+          working_directory: libmobilecoin
           command: make push-generated
 
   check-dirty-git:
     steps:
       - run:
           name: Check dirty git
+          working_directory: libmobilecoin
           command: |
             if [[ -n $(git status --porcelain) ]]; then
               echo "repo is dirty"
@@ -566,7 +592,10 @@ jobs:
       SCAN_OUTPUT_DIRECTORY: ../output/scan
       SCAN_OUTPUT_TYPES: junit
     steps:
-      - checkout
+      - run:
+          name: Clone GitHub repository
+          command: git clone --depth 1 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
+      - init-artifacts-submodule
       - init-mobilecoin-submodule
       - set-ruby-version
       - install-gems
@@ -585,7 +614,10 @@ jobs:
     environment:
       <<: *default-environment
     steps:
-      - checkout
+      - run:
+          name: Clone GitHub repository
+          command: git clone --depth 1 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
+      - init-artifacts-submodule
       - init-mobilecoin-submodule
       - set-ruby-version
       - install-gems
@@ -606,17 +638,23 @@ jobs:
       <<: *default-build-environment
       OPENSSL_BIN: /usr/local/opt/openssl/bin/openssl
     steps:
-      - checkout
+      - run:
+          name: Clone GitHub repository
+          command: git clone --depth 1 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
       - init-mobilecoin-submodule
       - restore-build-artifact-cache:
           build-target: <<parameters.build-target>>
       - skip-if-cache-file-exists:
-          file: ~/project/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release/libmobilecoin.a
+          file: libmobilecoin/libmobilecoin/out/ios/target/<<parameters.build-target>>/mobile-release/libmobilecoin.a
+      - run:
+          name: Install git-lfs mac
+          command: |
+            git lfs install
       - prepare-for-build: { os: macos }
       - restore-rustup-cache:
           build-target: <<parameters.build-target>>
       - run:
-          working_directory: libmobilecoin
+          working_directory: libmobilecoin/libmobilecoin
           name: Build libmobilecoin static libraries
           command: |
             make setup
@@ -635,11 +673,18 @@ jobs:
     environment:
       <<: *default-build-environment
     steps:
-      - checkout
+      - run:
+          name: Clone GitHub repository
+          command: git clone --depth 1 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
+      - run:
+          name: Install git-lfs mac
+          command: |
+            git lfs install
+      - init-artifacts-submodule
       - init-mobilecoin-submodule
       - run:
           name: Make output directories
-          working_directory: libmobilecoin
+          working_directory: libmobilecoin/libmobilecoin
           command: |
             mkdir -p out/ios/target
 
@@ -656,13 +701,31 @@ jobs:
       - restore-build-artifact-headers-cache
       - run:
           name: Copy Artifacts 
+          working_directory: libmobilecoin
           command: |
             make copy
 
-      - persist_to_workspace:
-          root: ./
-          paths:
-            - Artifacts
+      - set-git-credentials
+      - set-artifacts-git-credentials
+      - run:
+          name: Push artifacts to remote w/ LFS
+          working_directory: libmobilecoin/Artifacts
+          command: |
+            git checkout -b ${CIRCLE_BRANCH} || true
+            git checkout ${CIRCLE_BRANCH}
+            git config pull.rebase false
+            git pull origin ${CIRCLE_BRANCH} || true
+            git add .
+            git commit -m 'Add compiled static libraries from CICD'
+            git push origin ${CIRCLE_BRANCH}
+
+      - run:
+          name: Update libmobilecoin submodule tracked commit hash
+          working_directory: libmobilecoin
+          command: |
+            git add Artifacts
+            git commit -m '[skip ci] Update Artifacts submodule commit hash for compiled static libraries from CICD'
+            git push origin ${CIRCLE_BRANCH}
 
   make-generate:
     machine: 
@@ -670,26 +733,21 @@ jobs:
     environment:
       <<: *default-build-environment
     steps:
-      - checkout
+      - run:
+          name: Clone GitHub repository
+          command: git clone --depth 1 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
+      - set-git-credentials
+      - run:
+          name: Pull latest to get new CICD changes
+          working_directory: libmobilecoin/Artifacts
+          command: |
+            git fetch origin ${CIRCLE_BRANCH} && git reset --hard origin/${CIRCLE_BRANCH}
       - init-mobilecoin-submodule
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Copy artifacts from workspce
-          command: |
-            rm -rf Artifacts
-            cp -R /tmp/workspace/Artifacts ./
-      - run:
-          name: Install git-lfs
-          command: |
-            sudo apt install git-lfs
-            git lfs install
       - run:
           name: make generate (proto -> grpc swift) 
+          working_directory: libmobilecoin
           command: |
             make generate
-
-      - set-git-credentials
       - make-push-generated
 
   test-example-http-with-mobilecoin-swift:
@@ -708,7 +766,14 @@ jobs:
       SCAN_OUTPUT_DIRECTORY: ../output/scan
       SCAN_OUTPUT_TYPES: junit
     steps:
-      - checkout
+      - run:
+          name: Clone GitHub repository
+          command: git clone --depth 1 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
+      - run:
+          name: Install git-lfs mac
+          command: |
+            git lfs install
+      - init-artifacts-submodule
       - init-mobilecoin-submodule
       - set-ruby-version
       - set-git-credentials
@@ -743,7 +808,14 @@ jobs:
       SCAN_OUTPUT_DIRECTORY: ../output/scan
       SCAN_OUTPUT_TYPES: junit
     steps:
-      - checkout
+      - run:
+          name: Clone GitHub repository
+          command: git clone --depth 1 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
+      - run:
+          name: Install git-lfs mac
+          command: |
+            git lfs install
+      - init-artifacts-submodule
       - init-mobilecoin-submodule
       - set-ruby-version
       - set-git-credentials
