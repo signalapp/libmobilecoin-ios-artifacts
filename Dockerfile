@@ -60,6 +60,8 @@ RUN mkdir -p Sources/GRPC
 RUN mkdir -p Sources/Common
 
 COPY Vendor/misty-swap/api/proto/mistyswap_offramp.proto \
+    Vendor/misty-swap/api/proto/mistyswap_onramp.proto \
+    Vendor/misty-swap/api/proto/mistyswap_common.proto \
     Vendor/misty-swap/api/proto/
 
 RUN protoc \
@@ -88,6 +90,8 @@ RUN protoc \
     kex_rng.proto \
     ledger.proto \
     mistyswap_offramp.proto \
+    mistyswap_onramp.proto \
+    mistyswap_common.proto \
     view.proto \
     legacyview.proto
 
@@ -121,6 +125,8 @@ RUN protoc \
     kex_rng.proto \
     ledger.proto \
     mistyswap_offramp.proto \
+    mistyswap_onramp.proto \
+    mistyswap_common.proto \
     view.proto \
     legacyview.proto
 

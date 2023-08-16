@@ -717,7 +717,7 @@ jobs:
             git pull origin ${CIRCLE_BRANCH} || true
             git add .
             git commit -m 'Add compiled static libraries from CICD'
-            git push origin ${CIRCLE_BRANCH}
+            git push origin ${CIRCLE_BRANCH} || true
 
       - run:
           name: Update libmobilecoin submodule tracked commit hash

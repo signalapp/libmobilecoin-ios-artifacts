@@ -1,0 +1,73 @@
+// Copyright (c) 2018-2023 MobileCoin Inc.
+
+syntax = "proto3";
+
+package mistyswap_common;
+option go_package = "mistyswap/api";
+
+import "google/protobuf/empty.proto";
+
+service MistyswapCommonApi {
+    /// Get information about this mistyswap instance.
+    rpc GetInfo (google.protobuf.Empty) returns (GetInfoResponse) {}
+}
+
+/// On-going swap info.
+message OngoingSwap {
+    /// The Mixin trace ID of the swap.
+    string trace_id = 1;
+
+    /// The Mixin user ID of the swap.
+    string follow_id = 2;
+
+    /// Asset UUID we are swapping from.
+    string src_asset_id = 3;
+
+    /// Amount we are swapping (string since it can be decimal).
+    string src_amount = 4;
+
+    /// Asset UUID we are swapping to.
+    string dst_asset_id = 5;
+
+    /// Minimum amount we will accept, otherwise the swap gets rejected (string since it can be decimal).
+    string dst_amount_min = 6;
+
+    /// Mixin route hash ids.
+    string route_hash_ids = 7;
+
+    /// The Mixin snapshot JSON blob.
+    string transfer_json = 8;
+
+    /// Our balance of the src asset before we sent the swap transaction.
+    string pre_swap_src_balance = 9;
+
+    /// Our balance of the dst asset before we sent the swap transaction.
+    string pre_swap_dst_balance = 10;
+}
+
+/// Response to the `GetInfo` request
+message GetInfoResponse {
+    /// Max concurrent offramps
+    uint64 max_concurrent_offramps = 1;
+
+    /// Max concurrent onramps
+    uint64 max_concurrent_onramps = 2;
+
+    /// Current number of offramps
+    uint64 current_offramps = 3;
+
+    /// Current number of onramps
+    uint64 current_onramps = 4;
+
+    /// List of supported offramp source asset ids.
+    repeated string offramp_allowed_src_asset_ids = 5;
+
+    /// List of supported offramp destination asset ids.
+    repeated string offramp_allowed_dst_asset_ids = 6;
+
+    /// List of supported onramp source asset ids.
+    repeated string onramp_allowed_src_asset_ids = 7;
+
+    /// List of supported onramp destination asset ids.
+    repeated string onramp_allowed_dst_asset_ids = 8;
+}

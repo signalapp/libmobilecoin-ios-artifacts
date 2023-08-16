@@ -1,0 +1,177 @@
+// Copyright (c) 2018-2023 MobileCoin Inc.
+
+syntax = "proto3";
+
+package mistyswap_onramp;
+option go_package = "mistyswap/api";
+
+import "attest.proto";
+import "mistyswap_common.proto";
+
+service MistyswapOnrampApi {
+    /// Setup onramping (or check if it is already setup).
+    /// Input should be an encrypted SetupOnrampRequest, output is an encrypted SetupOnrampResponse.
+    rpc SetupOnramp(attest.Message) returns (attest.Message) {}
+
+    /// Forget an onramp.
+    /// Input should be an encrypted ForgetOnrampRequest, output is an encrypted ForgetOnrampResponse.
+    rpc ForgetOnramp(attest.Message) returns (attest.Message) {}
+
+    /// Get the status of an onramp.
+    /// Input should be an encrypted GetOnrampStatusRequest, output is an encrypted GetOnrampStatusResponse.
+    rpc GetOnrampStatus(attest.Message) returns (attest.Message) {}
+
+    /// Get debug info.
+    /// Input should be an encrypted GetOnrampDebugInfoRequest, output is an encrypted GetOnrampDebugInfoResponse.
+    rpc GetOnrampDebugInfo(attest.Message) returns (attest.Message) {}
+}
+
+/// Various possible onramp error codes.
+/// This should be kept in sync with mistyswap_onramp_api::Error
+/// The ORC prefix is needed since enum variants have to be unique across all enums in the file.
+enum OnrampResultCode {
+    ORC_INVALID = 0;
+    ORC_OK = 1;
+    ORC_TOO_MANY_ONRAMPS = 2;
+    ORC_MIXIN_CREDENTIALS_JSON = 3;
+    ORC_CREDENTIALS_ALREADY_IN_USE = 4;
+    ORC_MIXIN = 5;
+    ORC_ONRAMP_NOT_FOUND = 6;
+    ORC_INVALID_SRC_ASSET_ID = 7;
+    ORC_INVALID_DST_ASSET_ID = 8;
+    ORC_INVALID_WITHDRAWAL_ADDRESS = 9;
+    ORC_INVALID_MIN_WITHDRAWAL_AMOUNT = 10;
+    ORC_INVALID_MIN_SWAP_RATE = 11;
+}
+
+/// A simplified GRPC-compatible wrapper for Result<_, mistyswap_onramp_api::Error>
+message OnrampResult {
+    OnrampResultCode code = 1;
+    string message = 2;
+
+    // For Credentials Already In Use, this is the onramp_id of the existing onramp.
+    bytes onramp_id = 3;
+
+    // For Invalid Src/Dst asset id, this is the asset id that was invalid.
+    string asset_id = 4;
+}
+
+/// Onramp parameters.
+/// They are separated from the credentials since they are not as sensitive, and it makes it
+/// easier to include them to the client in the response to GetOnrampStatus calls.
+message OnrampParams {
+    /// The asset id we will be swapping into. This will be a MobileCoin token such as MOB or EUSD.
+    string dst_asset_id = 1;
+
+    /// A map of Mixin asset UUID to minimum swap rate (as a decimal number). For example,
+    /// if dst_asset_id is EUSD, and this map contains an entry (USDC, 0.95), and we receive 10 USDC,
+    /// we will set the minimum amount received from the swap to 9.5 EUSD.
+    /// This allows the client to control how much slippage it is willing to tolerate when performing swaps.
+    map<string, string> src_asset_id_to_min_swap_rate = 2;
+
+    /// The destination address to withdraw to after a successful swap.
+    string dst_address = 3;
+
+    /// The minimum withdrawal amount (as a decimal number). We will only withdraw if our balance exceeds this value.
+    /// This helps wasting fees on small withdrawals.
+    string min_withdrawal_amount = 4;
+}
+
+
+/// A request to setup an onramp.
+message SetupOnrampRequest {
+    /// Mixin credentials, as a JSON string.
+    string mixin_credentials_json = 1;
+
+    /// Onramp parameters.
+    OnrampParams params = 2;
+}
+
+/// A successful response to an SetupOnrampRequest.
+message SetupOnrampResponse {
+    /// Result of the onramp request.
+    OnrampResult result = 1;
+
+    /// Unique ID derived from the onramp request (set if result code is Ok)
+    bytes onramp_id = 2;
+}
+
+/// A request to forget an onramp.
+message ForgetOnrampRequest {
+    /// Unique ID of the onramp to forget.
+    bytes onramp_id = 1;
+}
+
+/// A response to a ForgetOnrampRequest.
+message ForgetOnrampResponse {
+    /// Result of the onramp request.
+    OnrampResult result = 1;
+}
+
+/// Current onramp state.
+/// This should be kept in sync with onramp_impl::OnrampState
+/// The OS prefix is needed since enum variants have to be unique across all enums in the file.
+enum OnrampState {
+    OS_INVALID = 0;
+    OS_NOT_STARTED = 1;
+    OS_POLLING = 2;
+    OS_WAITING = 3;
+    OS_INTERMITTENT_ERROR = 4;
+    OS_BLOCKED_ON_SWAP = 5;
+    OS_BLOCKED_ON_WITHDRAWAL = 6;
+}
+
+/// Details about a previously-initiated onramp.
+message Onramp {
+    /// The original onramp parameters.
+    OnrampParams params = 1;
+
+    /// Current state of the onramp.
+    OnrampState state = 2;
+
+    /// String details, if any, about the current state.
+    string state_details = 3;
+
+    /// The Mixin withdrawal address as a JSON blob.
+    string mixin_withdrawal_address_json = 4;
+
+    /// Ongoing swap info, if any.
+    mistyswap_common.OngoingSwap ongoing_swap = 5;
+
+    /// Ongoing withdrawal info, if any. This is a Mixin snapshot JSON blob.
+    string ongoing_withdrawal_json = 6;
+
+    /// Balances (map of Mixin asset UUID to balance as a decimal number).
+    map<string, string> balances = 7;
+}
+
+/// Get the status of an onramp.
+message GetOnrampStatusRequest {
+    /// Unique ID of the onramp to get the status of.
+    bytes onramp_id = 1;
+}
+
+/// A response to a GetOnrampStatusRequest.
+message GetOnrampStatusResponse {
+    /// Result of the onramp request.
+    OnrampResult result = 1;
+
+    /// The onramp status, if the result code is Ok.
+    Onramp onramp = 2;
+}
+
+/// Get the state transitions of a given onramp (for debug purposes).
+message GetOnrampDebugInfoRequest {
+    /// Unique ID of the onramp to get the status of.
+    bytes onramp_id = 1;
+}
+
+/// A response to a GetOnrampDebugInfoRequest.
+message GetOnrampDebugInfoResponse {
+    /// Result of the onramp request.
+    OnrampResult result = 1;
+
+    /// Debug info, encoded as a JSON blob.
+    /// The schema is defined by the OnrampDebugInfo Rust struct and serialized by serde.
+    string debug_info_json = 2;
+}
