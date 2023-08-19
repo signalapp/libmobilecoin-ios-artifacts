@@ -552,6 +552,12 @@ commands:
           fingerprints:
             - "16:4d:90:f0:c4:2b:2e:ac:96:7b:6b:8b:e0:ce:72:28"
       - run:
+          name: Use SSH remote for push
+          working_directory: libmobilecoin/Artifacts
+          command: |
+            git remote remove origin
+            git remote add origin git@github.com:mobilecoinofficial/libmobilecoin-apple-artifacts.git
+      - run:
           name: Publish Pod to Trunk
           working_directory: libmobilecoin
           command: make publish
