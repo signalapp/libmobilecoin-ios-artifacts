@@ -717,6 +717,8 @@ jobs:
             git pull origin ${CIRCLE_BRANCH} || true
             git add .
             git commit -m 'Add compiled static libraries from CICD'
+            git remote remove origin
+            git remote add origin git@github.com:mobilecoinofficial/libmobilecoin-apple-artifacts.git
             git push origin ${CIRCLE_BRANCH} || true
 
       - run:
@@ -843,6 +845,11 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       # ios-sim
       - build-artifacts:
@@ -851,6 +858,11 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       # ios-device
       - build-artifacts:
@@ -859,6 +871,11 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       # intel-ios-sim
       - build-artifacts:
@@ -867,6 +884,11 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       # intel-macos
       - build-artifacts:
@@ -875,6 +897,11 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       # apple-silicon-macos
       - build-artifacts:
@@ -883,9 +910,14 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       - copy-artifacts:
-          name: copy-artifacats
+          name: copy-artifacts-job
           requires:
             - build-artifacts-m1-ios-sim-xcode-<< matrix.xcode-version >>
             - build-artifacts-ios-device-xcode-<< matrix.xcode-version >>
@@ -895,11 +927,21 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       - make-generate:
           name: make-generate
           requires:
             - copy-artifacts
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       - test-example-http-with-mobilecoin-swift:
           name: test-example-http-with-mobilecoin-swift-<< matrix.xcode-version >>
@@ -908,6 +950,11 @@ workflows:
           matrix:
             parameters:
               xcode-version: [*default-xcode-version]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       - test-example-with-mobilecoin-swift:
           name: test-example-with-mobilecoin-swift-<< matrix.xcode-version >>
@@ -916,6 +963,11 @@ workflows:
           matrix:
             parameters:
               xcode-version: ["12.5.1"]
+          filters:
+            branches:
+              ignore:
+                 - master
+                 - /release\/.*/
 
       - publish-pod-release:
           filters:
