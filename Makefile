@@ -104,7 +104,7 @@ lint: lint-podspec
 lint-locally: lint-locally-podspec
 
 .PHONY: publish
-publish: tag-release publish-podspec
+publish: save-release-artifacts tag-release publish-podspec
 
 .PHONY: publish-hotfix
 publish-hotfix: tag-hotfix publish-podspec
@@ -121,19 +121,31 @@ push-generated:
 
 # Release
 
+.PHONY: save-release-artifacts
+save-release-artifacts:
+	@[[ "$$(git rev-parse --abbrev-ref HEAD)" == "master" ]] || \
+		{ echo 'Error: Must be on branch "master" when tagging a release.'; exit 1; }
+	VERSION="$$(bundle exec pod ipc spec LibMobileCoin.podspec | jq -r '.version')" && \
+		SHORTSHA="$$(git rev-parse --short HEAD)" && \
+		TIME="$$(date +%s)" && \
+		cd Artifacts && \
+		git checkout -b "master-$$VERSION-$$SHORTSHA-$$TIME" && \
+		git push origin "master-$$VERSION-$$SHORTSHA-$$TIME"
+	
 .PHONY: tag-release
 tag-release:
 	@[[ "$$(git rev-parse --abbrev-ref HEAD)" == "master" ]] || \
 		{ echo 'Error: Must be on branch "master" when tagging a release.'; exit 1; }
 	VERSION="$$(bundle exec pod ipc spec LibMobileCoin.podspec | jq -r '.version')" && \
 		git tag "v$$VERSION" && \
-		git push git@github.com:mobilecoinofficial/libmobilecoin-ios-artifacts.git "refs/tags/v$$VERSION"
+		git push git@github.com:mobilecoinofficial/libmobilecoin.git "refs/tags/v$$VERSION"
+	
 
 .PHONY: tag-hotfix
 tag-hotfix:
 	VERSION="$$(bundle exec pod ipc spec LibMobileCoin.podspec | jq -r '.version')" && \
 		git tag "v$$VERSION" && \
-		git push git@github.com:mobilecoinofficial/libmobilecoin-ios-artifacts.git "refs/tags/v$$VERSION"
+		git push git@github.com:mobilecoinofficial/libmobilecoin.git "refs/tags/v$$VERSION"
 
 # LibMobileCoin pod
 
