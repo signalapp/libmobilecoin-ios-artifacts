@@ -62,17 +62,26 @@ public struct Report_Report {
   //// This should match fog_report_id in Bob's public_address
   public var fogReportID: String = String()
 
-  //// The IAS report of the Fog Ingest node.
+  //// The attestation evidence for the fog ingest node.
   ////
-  //// This report structure includes the ingest server's ingress public key.
-  public var report: External_VerificationReport {
-    get {return _report ?? External_VerificationReport()}
-    set {_report = newValue}
+  //// This includes the ingest server's ingress public key.
+  public var attestationEvidence: Report_Report.OneOf_AttestationEvidence? = nil
+
+  public var verificationReport: External_VerificationReport {
+    get {
+      if case .verificationReport(let v)? = attestationEvidence {return v}
+      return External_VerificationReport()
+    }
+    set {attestationEvidence = .verificationReport(newValue)}
   }
-  /// Returns true if `report` has been explicitly set.
-  public var hasReport: Bool {return self._report != nil}
-  /// Clears the value of `report`. Subsequent reads from it will return its default value.
-  public mutating func clearReport() {self._report = nil}
+
+  public var dcapEvidence: External_DcapEvidence {
+    get {
+      if case .dcapEvidence(let v)? = attestationEvidence {return v}
+      return External_DcapEvidence()
+    }
+    set {attestationEvidence = .dcapEvidence(newValue)}
+  }
 
   //// The first block index in which a well-formed client may not use this public key.
   //// This is the same semantic as tombstone block of a Tx, which is the first block index
@@ -87,15 +96,41 @@ public struct Report_Report {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public init() {}
+  //// The attestation evidence for the fog ingest node.
+  ////
+  //// This includes the ingest server's ingress public key.
+  public enum OneOf_AttestationEvidence: Equatable {
+    case verificationReport(External_VerificationReport)
+    case dcapEvidence(External_DcapEvidence)
 
-  fileprivate var _report: External_VerificationReport? = nil
+  #if !swift(>=4.1)
+    public static func ==(lhs: Report_Report.OneOf_AttestationEvidence, rhs: Report_Report.OneOf_AttestationEvidence) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.verificationReport, .verificationReport): return {
+        guard case .verificationReport(let l) = lhs, case .verificationReport(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.dcapEvidence, .dcapEvidence): return {
+        guard case .dcapEvidence(let l) = lhs, case .dcapEvidence(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
+
+  public init() {}
 }
 
 #if swift(>=5.5) && canImport(_Concurrency)
 extension Report_ReportRequest: @unchecked Sendable {}
 extension Report_ReportResponse: @unchecked Sendable {}
 extension Report_Report: @unchecked Sendable {}
+extension Report_Report.OneOf_AttestationEvidence: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -169,7 +204,8 @@ extension Report_Report: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
   public static let protoMessageName: String = _protobuf_package + ".Report"
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "fog_report_id"),
-    2: .same(proto: "report"),
+    2: .standard(proto: "verification_report"),
+    4: .standard(proto: "dcap_evidence"),
     3: .standard(proto: "pubkey_expiry"),
   ]
 
@@ -180,8 +216,33 @@ extension Report_Report: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.fogReportID) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._report) }()
+      case 2: try {
+        var v: External_VerificationReport?
+        var hadOneofValue = false
+        if let current = self.attestationEvidence {
+          hadOneofValue = true
+          if case .verificationReport(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.attestationEvidence = .verificationReport(v)
+        }
+      }()
       case 3: try { try decoder.decodeSingularFixed64Field(value: &self.pubkeyExpiry) }()
+      case 4: try {
+        var v: External_DcapEvidence?
+        var hadOneofValue = false
+        if let current = self.attestationEvidence {
+          hadOneofValue = true
+          if case .dcapEvidence(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.attestationEvidence = .dcapEvidence(v)
+        }
+      }()
       default: break
       }
     }
@@ -195,18 +256,21 @@ extension Report_Report: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     if !self.fogReportID.isEmpty {
       try visitor.visitSingularStringField(value: self.fogReportID, fieldNumber: 1)
     }
-    try { if let v = self._report {
+    try { if case .verificationReport(let v)? = self.attestationEvidence {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
     if self.pubkeyExpiry != 0 {
       try visitor.visitSingularFixed64Field(value: self.pubkeyExpiry, fieldNumber: 3)
     }
+    try { if case .dcapEvidence(let v)? = self.attestationEvidence {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Report_Report, rhs: Report_Report) -> Bool {
     if lhs.fogReportID != rhs.fogReportID {return false}
-    if lhs._report != rhs._report {return false}
+    if lhs.attestationEvidence != rhs.attestationEvidence {return false}
     if lhs.pubkeyExpiry != rhs.pubkeyExpiry {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

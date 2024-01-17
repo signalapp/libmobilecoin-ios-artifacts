@@ -86,7 +86,7 @@ public enum Watcher_TimestampResultCode: SwiftProtobuf.Enum {
 
 extension Watcher_TimestampResultCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [Watcher_TimestampResultCode] = [
+  public static let allCases: [Watcher_TimestampResultCode] = [
     .unusedField,
     .timestampFound,
     .watcherBehind,

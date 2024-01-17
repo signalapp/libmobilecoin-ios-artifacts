@@ -2,7 +2,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 name = "libmobilecoin"
-version = "5.0.0"
+version = "6.0.0"
 authors = ["MobileCoin"]
 edition = "2021"
 
@@ -23,6 +23,7 @@ codegen-units = 1
 # External dependencies
 aes-gcm = "0.10.1"
 crc = "3.0.0"
+der = "0.7.8"
 displaydoc = "0.2"
 generic-array = { version = "0.14", features = ["serde", "more_lengths"] }
 libc = "0.2"
@@ -44,6 +45,8 @@ mc-api = { path = "../Vendor/mobilecoin/api" }
 mc-attest-ake = { path = "../Vendor/mobilecoin/attest/ake" }
 mc-attest-core = { path = "../Vendor/mobilecoin/attest/core" }
 mc-attest-verifier = { path = "../Vendor/mobilecoin/attest/verifier" }
+mc-attest-verifier-types = { path = "../Vendor/mobilecoin/attest/verifier/types", default-features = false }
+mc-attestation-verifier = "0.4.1"
 mc-blockchain-types = { path = "../Vendor/mobilecoin/blockchain/types" }
 mc-common = { path = "../Vendor/mobilecoin/common", features = ["std"] }
 mc-core = { path = "../Vendor/mobilecoin/core" }
@@ -61,6 +64,7 @@ mc-fog-report-resolver = { path = "../Vendor/mobilecoin/fog/report/resolver" }
 mc-fog-report-types = { path = "../Vendor/mobilecoin/fog/report/types" }
 mc-fog-report-validation = { path = "../Vendor/mobilecoin/fog/report/validation" }
 mc-light-client-verifier = { path = "../Vendor/mobilecoin/light-client/verifier" }
+mc-sgx-dcap-types = "0.9.0"
 mc-transaction-builder = { path = "../Vendor/mobilecoin/transaction/builder" }
 mc-transaction-core = { path = "../Vendor/mobilecoin/transaction/core" }
 mc-transaction-extra = { path = "../Vendor/mobilecoin/transaction/extra" }
@@ -75,18 +79,6 @@ cbindgen = { version = "0.24" }
 # Fork and rename to use "OG" dalek-cryptography with latest dependencies.
 bulletproofs-og = { git = "https://github.com/mobilecoinfoundation/bulletproofs.git", rev = "9abfdc054d9ba65f1e185ea1e6eff3947ce879dc" }
 
-curve25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek", rev = "99c0520aa79401b69fb51d38172cd58c6a256cfb" }
-
-# Fix issues with recent nightlies, bump curve25519-dalek version
-ed25519-dalek = { git = "https://github.com/dalek-cryptography/ed25519-dalek.git", rev = "2931c688eb11341a1145e257bc41d8ecbe36277c" }
-
-# Fork and rename to use "OG" dalek-cryptography with latest dependencies.
-#bulletproofs-og = { git = "https://github.com/mobilecoinfoundation/bulletproofs.git", rev = "65f8af4ca0bc1cb2fd2148c3259a0a76b155ff3e" }
-
-# Fix issues with recent nightlies, bump curve25519-dalek version
-#curve25519-dalek = { git = "https://github.com/mobilecoinfoundation/curve25519-dalek.git", rev = "8791722e0273762552c9a056eaccb7df6baf44d7" }
-#ed25519-dalek = { git = "https://github.com/mobilecoinfoundation/ed25519-dalek.git", rev = "4194e36abc75722e6fba7d552e719448fc38c51f" }
-
 # mbedtls patched to allow certificate verification with a profile
 mbedtls = { git = "https://github.com/the-real-adammork/rust-mbedtls.git", rev = "4116532348530f1de538e90336ebe65809e0dc95" }
 mbedtls-sys-auto = { git = "https://github.com/the-real-adammork/rust-mbedtls.git", rev = "4116532348530f1de538e90336ebe65809e0dc95" }
@@ -95,21 +87,12 @@ mbedtls-sys-auto = { git = "https://github.com/the-real-adammork/rust-mbedtls.gi
 lmdb-rkv = { git = "https://github.com/mozilla/lmdb-rs", rev = "df1c2f5" }
 
 # Fork and rename to use "OG" dalek-cryptography.
-#schnorrkel-og = { git = "https://github.com/mobilecoinfoundation/schnorrkel.git", rev = "5c98ae068ee4652d6df6463b549fbf2d5d132faa" }
-
-# Fork and rename to use "OG" dalek-cryptography.
-schnorrkel-og = { git = "https://github.com/mobilecoinfoundation/schnorrkel.git", rev = "b76d8c3a50671b08af0874b25b2543d3302d794d" }
+schnorrkel-og = { git = "https://github.com/mobilecoinfoundation/schnorrkel.git", rev = "049bf9d30f3bbe072e2ad1b5eefdf0f3c851215e" }
 
 # Fixes the following:
 # * Allow enabling `serde/std` without also requiring `serde_cbor/std` to be enabled.
 #   See: https://github.com/pyfisch/cbor/pull/198
 serde_cbor = { git = "https://github.com/mobilecoinofficial/cbor", rev = "4c886a7c1d523aae1ec4aa7386f402cb2f4341b5" }
-
-# Fix issues with recent nightlies, bump curve25519-dalek version
-#x25519-dalek = { git = "https://github.com/mobilecoinfoundation/x25519-dalek.git", rev = "c1966b8743d320cd07a54191475e5c0f94b2ea30" }
-
-# Fix issues with recent nightlies, bump curve25519-dalek version
-x25519-dalek = { git = "https://github.com/mobilecoinfoundation/x25519-dalek.git", rev = "4fbaa3343301c62cfdbc3023c9f485257e6b718a" }
 
 # Override diesel dependency with our fork, to statically link SQLite.
 diesel = { git = "https://github.com/mobilecoinofficial/diesel", rev = "026f6379715d27c8be48396e5ca9059f4a263198" }

@@ -192,7 +192,7 @@ public enum ConsensusCommon_ProposeTxResult: SwiftProtobuf.Enum {
 
 extension ConsensusCommon_ProposeTxResult: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [ConsensusCommon_ProposeTxResult] = [
+  public static let allCases: [ConsensusCommon_ProposeTxResult] = [
     .ok,
     .inputsProofsLengthMismatch,
     .noInputs,

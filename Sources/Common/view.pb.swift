@@ -71,7 +71,7 @@ public enum FogView_MultiViewStoreQueryResponseStatus: SwiftProtobuf.Enum {
 
 extension FogView_MultiViewStoreQueryResponseStatus: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [FogView_MultiViewStoreQueryResponseStatus] = [
+  public static let allCases: [FogView_MultiViewStoreQueryResponseStatus] = [
     .unknown,
     .success,
     .authenticationError,
@@ -138,7 +138,7 @@ public enum FogView_TxOutSearchResultCode: SwiftProtobuf.Enum {
 
 extension FogView_TxOutSearchResultCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [FogView_TxOutSearchResultCode] = [
+  public static let allCases: [FogView_TxOutSearchResultCode] = [
     .intentionallyUnused,
     .found,
     .notFound,

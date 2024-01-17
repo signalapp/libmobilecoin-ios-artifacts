@@ -68,7 +68,7 @@ public struct Attest_Message {
 //// An AEAD message with an explicit nonce.
 ////
 //// This message is technically compatible with [`Message`], but exists to
-/// ensure generated code doesn't use Message.
+//// ensure generated code doesn't use Message.
 public struct Attest_NonceMessage {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

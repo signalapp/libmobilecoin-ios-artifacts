@@ -1,118 +1,219 @@
-// Copyright (c) 2018-2022 The MobileCoin Foundation
+// Copyright (c) 2018-2022 The MobileCoin Foundatio, timen
 
 use crate::{common::*, LibMcError};
 use aes_gcm::Aes256Gcm;
 use core::str::FromStr;
+use der::DateTime;
 use libc::ssize_t;
 use mc_attest_ake::{
     AuthPending, AuthResponseInput, AuthResponseOutput, ClientInitiate, Ready, Start, Transition,
 };
 use mc_attest_core::{MrEnclave, MrSigner};
-use mc_attest_verifier::{MrEnclaveVerifier, MrSignerVerifier, Verifier, DEBUG_ENCLAVE};
-use mc_common::ResponderId;
+use mc_attestation_verifier::{TrustedIdentity, TrustedMrEnclaveIdentity, TrustedMrSignerIdentity};
+use mc_common::{ResponderId, time::{SystemTimeProvider, TimeProvider}};
 use mc_crypto_keys::X25519;
 use mc_crypto_noise::NoiseCipher;
 use mc_rand::McRng;
 use mc_util_ffi::*;
 use sha2::Sha512;
 
-pub type McMrEnclaveVerifier = MrEnclaveVerifier;
-impl_into_ffi!(MrEnclaveVerifier);
+pub type McTrustedMrEnclaveIdentity = TrustedMrEnclaveIdentity;
+impl_into_ffi!(TrustedMrEnclaveIdentity);
+
+pub type McTrustedMrSignerIdentity = TrustedMrSignerIdentity;
+impl_into_ffi!(TrustedMrSignerIdentity);
 
 #[no_mangle]
-pub extern "C" fn mc_mr_enclave_verifier_free(
-    mr_enclave_verifier: FfiOptOwnedPtr<McMrEnclaveVerifier>,
+pub extern "C" fn mc_trusted_identity_mr_enclave_free(
+    mr_enclave_trusted_identity: FfiOptOwnedPtr<McTrustedMrEnclaveIdentity>,
 ) {
     ffi_boundary(|| {
-        let _ = mr_enclave_verifier;
+        let _ = mr_enclave_trusted_identity;
     })
 }
 
-/// Create a new status verifier that will check for the existence of the
-/// given MrEnclave.
+/// Create a new mr enclave trusted identity 
 ///
 /// # Preconditions
 ///
 /// * `mr_enclave` - must be 32 bytes in length.
 #[no_mangle]
-pub extern "C" fn mc_mr_enclave_verifier_create(
+pub extern "C" fn mc_trusted_identity_mr_enclave_create(
     mr_enclave: FfiRefPtr<McBuffer>,
-) -> FfiOptOwnedPtr<McMrEnclaveVerifier> {
+    config_advisories: FfiRefPtr<McAdvisories>,
+    hardening_advisories: FfiRefPtr<McAdvisories>,
+) -> FfiOptOwnedPtr<McTrustedMrEnclaveIdentity> {
     ffi_boundary(|| {
         let mr_enclave = MrEnclave::try_from_ffi(&mr_enclave).expect("mr_enclave is invalid");
-        MrEnclaveVerifier::new(mr_enclave)
+
+        let trusted_mr_enclave_identity = TrustedMrEnclaveIdentity::new(
+            mr_enclave,
+            &config_advisories.0,
+            &hardening_advisories.0,
+        );
+
+        trusted_mr_enclave_identity
     })
 }
 
-/// Assume an enclave with the specified measurement does not need
-/// BIOS configuration changes to address the provided advisory ID.
-///
-/// This method should only be used when advised by an enclave author.
-///
-/// # Preconditions
-///
-/// * `advisory_id` - must be a nul-terminated C string containing valid UTF-8.
 #[no_mangle]
-pub extern "C" fn mc_mr_enclave_verifier_allow_config_advisory(
-    mr_enclave_verifier: FfiMutPtr<McMrEnclaveVerifier>,
-    advisory_id: FfiStr,
-) -> bool {
-    ffi_boundary(|| {
-        let advisory_id = <&str>::try_from_ffi(advisory_id).expect("advisory_id is invalid");
-        mr_enclave_verifier
-            .into_mut()
-            .allow_config_advisory(advisory_id);
-    })
-}
-
-/// Assume the given MrEnclave value has the appropriate software/build-time
-/// hardening for the given advisory ID.
-///
-/// This method should only be used when advised by an enclave author.
-///
-/// # Preconditions
-///
-/// * `advisory_id` - must be a nul-terminated C string containing valid UTF-8.
-#[no_mangle]
-pub extern "C" fn mc_mr_enclave_verifier_allow_hardening_advisory(
-    mr_enclave_verifier: FfiMutPtr<McMrEnclaveVerifier>,
-    advisory_id: FfiStr,
-) -> bool {
-    ffi_boundary(|| {
-        let advisory_id = <&str>::try_from_ffi(advisory_id).expect("advisory_id is invalid");
-        mr_enclave_verifier
-            .into_mut()
-            .allow_hardening_advisory(advisory_id);
-    })
-}
-
-pub type McMrSignerVerifier = MrSignerVerifier;
-impl_into_ffi!(MrSignerVerifier);
-
-#[no_mangle]
-pub extern "C" fn mc_mr_signer_verifier_free(
-    mr_signer_verifier: FfiOptOwnedPtr<McMrSignerVerifier>,
+pub extern "C" fn mc_trusted_identity_mr_signer_free(
+    mr_signer_trusted_identity: FfiOptOwnedPtr<McTrustedMrSignerIdentity>,
 ) {
     ffi_boundary(|| {
-        let _ = mr_signer_verifier;
+        let _ = mr_signer_trusted_identity;
     })
 }
 
-/// Create a new status verifier that will check for the existence of the
-/// given MrSigner.
+/// Create a new mr signer trusted identity 
 ///
 /// # Preconditions
 ///
 /// * `mr_signer` - must be 32 bytes in length.
 #[no_mangle]
-pub extern "C" fn mc_mr_signer_verifier_create(
+pub extern "C" fn mc_trusted_identity_mr_signer_create(
     mr_signer: FfiRefPtr<McBuffer>,
+    config_advisories: FfiRefPtr<McAdvisories>,
+    hardening_advisories: FfiRefPtr<McAdvisories>,
     expected_product_id: u16,
     minimum_security_version: u16,
-) -> FfiOptOwnedPtr<McMrSignerVerifier> {
+) -> FfiOptOwnedPtr<McTrustedMrSignerIdentity> {
     ffi_boundary(|| {
         let mr_signer = MrSigner::try_from_ffi(&mr_signer).expect("mr_signer is invalid");
-        MrSignerVerifier::new(mr_signer, expected_product_id, minimum_security_version)
+
+        let trusted_mr_signer_identity = TrustedMrSignerIdentity::new(
+            mr_signer,
+            expected_product_id.into(),
+            minimum_security_version.into(),
+            &config_advisories.0,
+            &hardening_advisories.0
+        );
+
+        trusted_mr_signer_identity
+    })
+}
+
+/// # Preconditions
+///
+/// * `mr_enclave_trusted_identity` - valid MrEnclaveTrustedIdentity.
+/// * `out_advisories` - length is dynamic
+///
+#[no_mangle]
+pub extern "C" fn mc_trusted_mr_enclave_identity_advisories_to_string(
+    trusted_mr_enclave_identity: FfiRefPtr<McTrustedMrEnclaveIdentity>,
+    out_advisories: FfiOptMutPtr<McMutableBuffer>,
+) -> ssize_t {
+    ffi_boundary(|| {
+        let trusted_identity = (*trusted_mr_enclave_identity).clone();
+        let advisories_description = trusted_identity.advisories().to_string();
+
+        if let Some(out_advisories) = out_advisories.into_option() {
+            out_advisories
+                .into_mut()
+                .as_slice_mut_of_len(advisories_description.len())
+                .expect("Advisories description payload length is insufficient")
+                .copy_from_slice(advisories_description.as_ref());
+        }
+        return ssize_t::ffi_try_from(advisories_description.len())
+            .expect("advisories_description.len could not be converted to ssize_t");
+    })
+}
+
+/// # Preconditions
+///
+/// * `mr_enclave_trusted_identity` - valid MrEnclaveTrustedIdentity.
+/// * `out_enclave_measurement` - length is unknown
+///
+#[no_mangle]
+pub extern "C" fn mc_trusted_mr_enclave_identity_to_string(
+    trusted_mr_enclave_identity: FfiRefPtr<McTrustedMrEnclaveIdentity>,
+    out_enclave_measurement: FfiOptMutPtr<McMutableBuffer>,
+) -> ssize_t {
+    ffi_boundary(|| {
+        let trusted_identity = (*trusted_mr_enclave_identity).clone();
+        let enclave_description = trusted_identity.mr_enclave().to_string();
+
+        if let Some(out_enclave_measurement) = out_enclave_measurement.into_option() {
+            out_enclave_measurement
+                .into_mut()
+                .as_slice_mut_of_len(enclave_description.len())
+                .expect("Advisories description payload length is insufficient")
+                .copy_from_slice(enclave_description.as_ref());
+        }
+        return ssize_t::ffi_try_from(enclave_description.len())
+            .expect("enclave_description.len could not be converted to ssize_t");
+    })
+}
+
+/// # Preconditions
+///
+/// * `mr_signer_trusted_identity` - valid MrSignerTrustedIdentity.
+/// * `out_advisories` - length is dynamic
+///
+#[no_mangle]
+pub extern "C" fn mc_trusted_mr_signer_identity_advisories_to_string(
+    trusted_mr_signer_identity: FfiRefPtr<McTrustedMrSignerIdentity>,
+    out_advisories: FfiOptMutPtr<McMutableBuffer>,
+) -> ssize_t {
+    ffi_boundary(|| {
+        let trusted_identity = (*trusted_mr_signer_identity).clone();
+        let advisories_description = trusted_identity.advisories().to_string();
+
+        if let Some(out_advisories) = out_advisories.into_option() {
+            out_advisories
+                .into_mut()
+                .as_slice_mut_of_len(advisories_description.len())
+                .expect("Advisories description payload length is insufficient")
+                .copy_from_slice(advisories_description.as_ref());
+        }
+        return ssize_t::ffi_try_from(advisories_description.len())
+            .expect("advisories_description.len could not be converted to ssize_t");
+    })
+}
+
+/// # Preconditions
+///
+/// * `mr_signer_trusted_identity` - valid MrSignerTrustedIdentity.
+/// * `out_signer_measurement` - length is unknown
+///
+#[no_mangle]
+pub extern "C" fn mc_trusted_mr_signer_identity_to_string(
+    trusted_mr_signer_identity: FfiRefPtr<McTrustedMrSignerIdentity>,
+    out_signer_measurement: FfiOptMutPtr<McMutableBuffer>,
+) -> ssize_t {
+    ffi_boundary(|| {
+        let trusted_identity = (*trusted_mr_signer_identity).clone();
+        let signer_description = trusted_identity.mr_signer().to_string();
+
+        if let Some(out_signer_measurement) = out_signer_measurement.into_option() {
+            out_signer_measurement
+                .into_mut()
+                .as_slice_mut_of_len(signer_description.len())
+                .expect("Advisories description payload length is insufficient")
+                .copy_from_slice(signer_description.as_ref());
+        }
+        return ssize_t::ffi_try_from(signer_description.len())
+            .expect("signer_description.len could not be converted to ssize_t");
+    })
+}
+
+/// Construct a new McAdvisories vector for holding config & hardening advisories
+///
+/// Advisories are used when an enclave with the specified measurement does not need
+/// BIOS configuration changes to address the provided advisory ID.
+///
+#[no_mangle]
+pub extern "C" fn mc_advisories_create() -> FfiOptOwnedPtr<McAdvisories> {
+    ffi_boundary(|| {
+        let advisories = McAdvisories(Vec::new());
+        advisories
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn mc_advisories_free(advisories: FfiOptOwnedPtr<McAdvisories>) {
+    ffi_boundary(|| {
+        let _ = advisories;
     })
 }
 
@@ -123,83 +224,67 @@ pub extern "C" fn mc_mr_signer_verifier_create(
 ///
 /// # Preconditions
 ///
+/// * `advisories` - a valid McAdvisories vector
 /// * `advisory_id` - must be a nul-terminated C string containing valid UTF-8.
+///
+/// TODO: update comments above
 #[no_mangle]
-pub extern "C" fn mc_mr_signer_verifier_allow_config_advisory(
-    mr_signer_verifier: FfiMutPtr<MrSignerVerifier>,
+pub extern "C" fn mc_add_advisory(
+    advisories: FfiMutPtr<McAdvisories>,
     advisory_id: FfiStr,
 ) -> bool {
     ffi_boundary(|| {
         let advisory_id = <&str>::try_from_ffi(advisory_id).expect("advisory_id is invalid");
-        mr_signer_verifier
-            .into_mut()
-            .allow_config_advisory(advisory_id);
+        advisories.into_mut().0.push(String::from(advisory_id));
     })
 }
 
-/// Assume an enclave with the specified measurement has the appropriate
-/// software/build-time hardening for the given advisory ID.
+pub type McTrustedIdentity = TrustedIdentity;
+impl_into_ffi!(TrustedIdentity);
+
+pub struct McTrustedIdentities (pub Vec<McTrustedIdentity>);
+impl_into_ffi!(McTrustedIdentities);
+
+pub struct McAdvisories (Vec<String>);
+impl_into_ffi!(McAdvisories);
+
+/// Construct a new TrustedIdentities vector that holds TrustedIdentity's (enclave or signer)
 ///
-/// This method should only be used when advised by an enclave author.
-///
-/// # Preconditions
-///
-/// * `advisory_id` - must be a nul-terminated C string containing valid UTF-8.
 #[no_mangle]
-pub extern "C" fn mc_mr_signer_verifier_allow_hardening_advisory(
-    mr_signer_verifier: FfiMutPtr<MrSignerVerifier>,
-    advisory_id: FfiStr,
+pub extern "C" fn mc_trusted_identities_create() -> FfiOptOwnedPtr<McTrustedIdentities> {
+    ffi_boundary(|| {
+        let trusted_identities = McTrustedIdentities(Vec::new());
+        trusted_identities
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn mc_trusted_identities_free(trusted_identities: FfiOptOwnedPtr<McTrustedIdentities>) {
+    ffi_boundary(|| {
+        let _ = trusted_identities;
+    })
+}
+
+/// 
+#[no_mangle]
+pub extern "C" fn mc_trusted_identities_add_mr_enclave(
+    trusted_identities: FfiMutPtr<McTrustedIdentities>,
+    trusted_mr_enclave_identity: FfiRefPtr<McTrustedMrEnclaveIdentity>,
 ) -> bool {
     ffi_boundary(|| {
-        let advisory_id = <&str>::try_from_ffi(advisory_id).expect("advisory_id is invalid");
-        mr_signer_verifier
-            .into_mut()
-            .allow_hardening_advisory(advisory_id);
+        let trusted_identity = TrustedIdentity::MrEnclave((*trusted_mr_enclave_identity).clone());
+        trusted_identities.into_mut().0.push(trusted_identity);
     })
 }
-
-pub type McVerifier = Verifier;
-impl_into_ffi!(Verifier);
-
-/// Construct a new builder using the baked-in IAS root certificates and debug
-/// settings.
+/// 
 #[no_mangle]
-pub extern "C" fn mc_verifier_create() -> FfiOptOwnedPtr<McVerifier> {
-    ffi_boundary(|| {
-        let mut verifier = Verifier::default();
-        verifier.debug(DEBUG_ENCLAVE);
-        verifier
-    })
-}
-
-#[no_mangle]
-pub extern "C" fn mc_verifier_free(verifier: FfiOptOwnedPtr<McVerifier>) {
-    ffi_boundary(|| {
-        let _ = verifier;
-    })
-}
-
-/// Verify the given MrEnclave-based status verifier succeeds
-#[no_mangle]
-pub extern "C" fn mc_verifier_add_mr_enclave(
-    verifier: FfiMutPtr<McVerifier>,
-    mr_enclave_verifier: FfiRefPtr<McMrEnclaveVerifier>,
+pub extern "C" fn mc_trusted_identities_add_mr_signer(
+    trusted_identities: FfiMutPtr<McTrustedIdentities>,
+    trusted_mr_signer_identity: FfiRefPtr<McTrustedMrSignerIdentity>,
 ) -> bool {
     ffi_boundary(|| {
-        verifier
-            .into_mut()
-            .mr_enclave((*mr_enclave_verifier).clone());
-    })
-}
-
-/// Verify the given MrSigner-based status verifier succeeds
-#[no_mangle]
-pub extern "C" fn mc_verifier_add_mr_signer(
-    verifier: FfiMutPtr<McVerifier>,
-    mr_signer_verifier: FfiRefPtr<McMrSignerVerifier>,
-) -> bool {
-    ffi_boundary(|| {
-        verifier.into_mut().mr_signer((*mr_signer_verifier).clone());
+        let trusted_identity = TrustedIdentity::MrSigner((*trusted_mr_signer_identity).clone());
+        trusted_identities.into_mut().0.push(trusted_identity);
     })
 }
 
@@ -349,7 +434,7 @@ pub extern "C" fn mc_attest_ake_get_auth_request(
 pub extern "C" fn mc_attest_ake_process_auth_response(
     attest_ake: FfiMutPtr<McAttestAke>,
     auth_response_data: FfiRefPtr<McBuffer>,
-    verifier: FfiRefPtr<McVerifier>,
+    trusted_identities: FfiRefPtr<McTrustedIdentities>,
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
 ) -> bool {
     ffi_boundary_with_error(out_error, || {
@@ -358,8 +443,14 @@ pub extern "C" fn mc_attest_ake_process_auth_response(
             .take_auth_pending()
             .expect("attest_ake is not in the auth pending state");
 
+        let epoch_time = SystemTimeProvider::default()
+            .since_epoch()
+            .map_err(|_| LibMcError::AttestationVerificationFailed("Time went backwards".to_owned()))?;
+        let time = DateTime::from_unix_duration(epoch_time)
+            .map_err(|_| LibMcError::AttestationVerificationFailed("Time out of range".to_owned()))?;
+
         let auth_response_output = AuthResponseOutput::from(auth_response_data.to_vec());
-        let auth_response_input = AuthResponseInput::new(auth_response_output, (*verifier).clone());
+        let auth_response_input = AuthResponseInput::new(auth_response_output, trusted_identities.0.clone(), time);
         let mut rng = McRng::default(); // This is actually unused.
         let (ready, _) = auth_pending.try_next(&mut rng, auth_response_input)?;
         *attest_ake = AttestAke::Attested(ready);

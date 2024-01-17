@@ -9,6 +9,7 @@ use crate::{
 };
 use core::convert::TryFrom;
 use mc_account_keys::{AccountKey, PublicAddress};
+use mc_attestation_verifier::{TrustedIdentity};
 use mc_crypto_keys::{ReprBytes, RistrettoPrivate, RistrettoPublic};
 use mc_crypto_ring_signature_signer::NoKeysRingSigner;
 use mc_fog_report_resolver::FogResolver;
@@ -61,7 +62,8 @@ pub extern "C" fn mc_signed_contingent_input_builder_create(
                     // It is safe to add an expect here (which should never occur) because
                     // fogReportUrl is already checked in mc_fog_resolver_add_report_response
                     // to be convertible to FogUri
-                    FogResolver::new(fog_resolver.0.clone(), &fog_resolver.1)
+                    let trusted_identities: Vec<TrustedIdentity> = fog_resolver.1.clone();
+                    FogResolver::new(fog_resolver.0.clone(), &trusted_identities)
                         .expect("FogResolver could not be constructed from the provided materials")
                 });
         let block_version = BlockVersion::try_from(block_version)?;

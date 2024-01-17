@@ -1,13 +1,13 @@
 // Copyright (c) 2018-2022 The MobileCoin Foundation
 
-use crate::{attest::McVerifier, common::*, keys::McPublicAddress, LibMcError};
+use crate::{attest::McTrustedIdentities, common::*, keys::McPublicAddress, LibMcError};
 use core::convert::TryFrom;
 use libc::ssize_t;
 use mc_account_keys::PublicAddress;
-use mc_attest_verifier::Verifier;
 use mc_crypto_keys::{ReprBytes, RistrettoPrivate, RistrettoPublic};
+use mc_attestation_verifier::{TrustedIdentity};
 use mc_fog_kex_rng::{BufferedRng, KexRngPubkey, NewFromKex, StoredRng, VersionedKexRng};
-use mc_fog_report_types::FogReportResponses;
+use mc_fog_report_types::{FogReportResponses};
 use mc_fog_report_resolver::FogResolver;
 use mc_fog_report_validation::{FullyValidatedFogPubkey, FogPubkeyResolver};
 use mc_util_ffi::*;
@@ -17,17 +17,18 @@ use std::str::FromStr;
 
 /* ==== McFogResolver ==== */
 
-pub type McFogResolver = (FogReportResponses, Verifier);
-impl_into_ffi!((FogReportResponses, Verifier));
+
+pub type McFogResolver = (FogReportResponses, Vec<TrustedIdentity>);
+impl_into_ffi!((FogReportResponses, Vec<TrustedIdentity>));
 
 #[no_mangle]
 pub extern "C" fn mc_fog_resolver_create(
-    fog_report_verifier: FfiRefPtr<McVerifier>,
+    fog_report_trusted_identities: FfiRefPtr<McTrustedIdentities>,
 ) -> FfiOptOwnedPtr<McFogResolver> {
     ffi_boundary(|| {
         (
             FogReportResponses::default(),
-            (*fog_report_verifier).clone(),
+            (*fog_report_trusted_identities).0.clone(),
         )
     })
 }
@@ -46,7 +47,8 @@ pub extern "C" fn mc_fog_resolver_get_fog_pubkey(
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
 ) -> FfiOptOwnedPtr<McFullyValidatedFogPubkey> {
     ffi_boundary_with_error(out_error, || {
-        let fog_resolver = FogResolver::new(fog_resolver.0.clone(), &fog_resolver.1.clone())
+        let trusted_identities: Vec<TrustedIdentity> = fog_resolver.1.clone();
+        let fog_resolver = FogResolver::new(fog_resolver.0.clone(), &trusted_identities)
             .map_err(|err| LibMcError::InvalidInput(err.to_string()))?;
 
         let recipient = PublicAddress::try_from_ffi(&recipient)?;
@@ -63,7 +65,8 @@ pub extern "C" fn mc_fog_resolver_get_fog_pubkey_from_protobuf_public_address(
     out_error: FfiOptMutPtr<FfiOptOwnedPtr<McError>>,
 ) -> FfiOptOwnedPtr<McFullyValidatedFogPubkey> {
     ffi_boundary_with_error(out_error, || {
-        let fog_resolver = FogResolver::new(fog_resolver.0.clone(), &fog_resolver.1)
+        let trusted_identities: Vec<TrustedIdentity> = fog_resolver.1.clone();
+        let fog_resolver = FogResolver::new(fog_resolver.0.clone(), &trusted_identities)
             .map_err(|err| LibMcError::InvalidInput(err.to_string()))?;
 
         let recipient = mc_util_serial::decode(recipient_protobuf.as_slice())?;

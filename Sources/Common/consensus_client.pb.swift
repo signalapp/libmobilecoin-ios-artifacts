@@ -92,7 +92,7 @@ public enum ConsensusClient_MintValidationResultCode: SwiftProtobuf.Enum {
 
 extension ConsensusClient_MintValidationResultCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [ConsensusClient_MintValidationResultCode] = [
+  public static let allCases: [ConsensusClient_MintValidationResultCode] = [
     .ok,
     .invalidBlockVersion,
     .invalidTokenID,

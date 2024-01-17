@@ -144,7 +144,7 @@ impl From<BlockVersionError> for LibMcError {
 
 impl From<AttestAkeError> for LibMcError {
     fn from(err: AttestAkeError) -> Self {
-        if let AttestAkeError::ReportVerification(VerifierError::Verification(_)) = err {
+        if let AttestAkeError::AttestationEvidenceVerification(VerifierError::Verification(_)) = err {
             LibMcError::AttestationVerificationFailed(format!("{:?}", err))
         } else {
             LibMcError::InvalidInput(format!("{:?}", err))

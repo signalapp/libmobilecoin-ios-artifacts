@@ -39,6 +39,9 @@ public enum FogLedger_MultiKeyImageStoreResponseStatus: SwiftProtobuf.Enum {
   //// The Fog Ledger Store is not ready to service a MultiLedgerStoreQueryRequest. This might be because the store has
   //// not loaded enough blocks yet.
   case notReady // = 3
+
+  //// The Fog Ledger Store could not decode the protobuf message.
+  case invalidArgument // = 4
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -51,6 +54,7 @@ public enum FogLedger_MultiKeyImageStoreResponseStatus: SwiftProtobuf.Enum {
     case 1: self = .success
     case 2: self = .authenticationError
     case 3: self = .notReady
+    case 4: self = .invalidArgument
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -61,6 +65,7 @@ public enum FogLedger_MultiKeyImageStoreResponseStatus: SwiftProtobuf.Enum {
     case .success: return 1
     case .authenticationError: return 2
     case .notReady: return 3
+    case .invalidArgument: return 4
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -71,11 +76,12 @@ public enum FogLedger_MultiKeyImageStoreResponseStatus: SwiftProtobuf.Enum {
 
 extension FogLedger_MultiKeyImageStoreResponseStatus: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [FogLedger_MultiKeyImageStoreResponseStatus] = [
+  public static let allCases: [FogLedger_MultiKeyImageStoreResponseStatus] = [
     .unknown,
     .success,
     .authenticationError,
     .notReady,
+    .invalidArgument,
   ]
 }
 
@@ -128,7 +134,7 @@ public enum FogLedger_OutputResultCode: SwiftProtobuf.Enum {
 
 extension FogLedger_OutputResultCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [FogLedger_OutputResultCode] = [
+  public static let allCases: [FogLedger_OutputResultCode] = [
     .intentionallyUnused,
     .doesNotExist,
     .exists,
@@ -185,7 +191,7 @@ public enum FogLedger_KeyImageResultCode: SwiftProtobuf.Enum {
 
 extension FogLedger_KeyImageResultCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [FogLedger_KeyImageResultCode] = [
+  public static let allCases: [FogLedger_KeyImageResultCode] = [
     .unused,
     .spent,
     .notSpent,
@@ -233,7 +239,7 @@ public enum FogLedger_TxOutResultCode: SwiftProtobuf.Enum {
 
 extension FogLedger_TxOutResultCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [FogLedger_TxOutResultCode] = [
+  public static let allCases: [FogLedger_TxOutResultCode] = [
     .notFound,
     .found,
     .malformedRequest,
@@ -839,6 +845,7 @@ extension FogLedger_MultiKeyImageStoreResponseStatus: SwiftProtobuf._ProtoNamePr
     1: .same(proto: "SUCCESS"),
     2: .same(proto: "AUTHENTICATION_ERROR"),
     3: .same(proto: "NOT_READY"),
+    4: .same(proto: "INVALID_ARGUMENT"),
   ]
 }
 

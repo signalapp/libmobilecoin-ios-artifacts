@@ -200,26 +200,59 @@ public struct Blockchain_BlockMetadataContents {
   /// Clears the value of `quorumSet`. Subsequent reads from it will return its default value.
   public mutating func clearQuorumSet() {self._quorumSet = nil}
 
-  /// IAS report for the enclave which generated the signature.
+  /// The attestation evidence for the enclave which generated the signature.
+  public var attestationEvidence: Blockchain_BlockMetadataContents.OneOf_AttestationEvidence? = nil
+
   public var verificationReport: External_VerificationReport {
-    get {return _verificationReport ?? External_VerificationReport()}
-    set {_verificationReport = newValue}
+    get {
+      if case .verificationReport(let v)? = attestationEvidence {return v}
+      return External_VerificationReport()
+    }
+    set {attestationEvidence = .verificationReport(newValue)}
   }
-  /// Returns true if `verificationReport` has been explicitly set.
-  public var hasVerificationReport: Bool {return self._verificationReport != nil}
-  /// Clears the value of `verificationReport`. Subsequent reads from it will return its default value.
-  public mutating func clearVerificationReport() {self._verificationReport = nil}
+
+  public var dcapEvidence: External_DcapEvidence {
+    get {
+      if case .dcapEvidence(let v)? = attestationEvidence {return v}
+      return External_DcapEvidence()
+    }
+    set {attestationEvidence = .dcapEvidence(newValue)}
+  }
 
   /// Responder ID of the consensus node that externalized this block.
   public var responderID: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
+  /// The attestation evidence for the enclave which generated the signature.
+  public enum OneOf_AttestationEvidence: Equatable {
+    case verificationReport(External_VerificationReport)
+    case dcapEvidence(External_DcapEvidence)
+
+  #if !swift(>=4.1)
+    public static func ==(lhs: Blockchain_BlockMetadataContents.OneOf_AttestationEvidence, rhs: Blockchain_BlockMetadataContents.OneOf_AttestationEvidence) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.verificationReport, .verificationReport): return {
+        guard case .verificationReport(let l) = lhs, case .verificationReport(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.dcapEvidence, .dcapEvidence): return {
+        guard case .dcapEvidence(let l) = lhs, case .dcapEvidence(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
+
   public init() {}
 
   fileprivate var _blockID: Blockchain_BlockID? = nil
   fileprivate var _quorumSet: QuorumSet_QuorumSet? = nil
-  fileprivate var _verificationReport: External_VerificationReport? = nil
 }
 
 public struct Blockchain_BlockMetadata {
@@ -229,41 +262,39 @@ public struct Blockchain_BlockMetadata {
 
   /// Metadata signed by the consensus node.
   public var contents: Blockchain_BlockMetadataContents {
-    get {return _contents ?? Blockchain_BlockMetadataContents()}
-    set {_contents = newValue}
+    get {return _storage._contents ?? Blockchain_BlockMetadataContents()}
+    set {_uniqueStorage()._contents = newValue}
   }
   /// Returns true if `contents` has been explicitly set.
-  public var hasContents: Bool {return self._contents != nil}
+  public var hasContents: Bool {return _storage._contents != nil}
   /// Clears the value of `contents`. Subsequent reads from it will return its default value.
-  public mutating func clearContents() {self._contents = nil}
+  public mutating func clearContents() {_uniqueStorage()._contents = nil}
 
   /// Message signing key (signer).
   public var nodeKey: External_Ed25519Public {
-    get {return _nodeKey ?? External_Ed25519Public()}
-    set {_nodeKey = newValue}
+    get {return _storage._nodeKey ?? External_Ed25519Public()}
+    set {_uniqueStorage()._nodeKey = newValue}
   }
   /// Returns true if `nodeKey` has been explicitly set.
-  public var hasNodeKey: Bool {return self._nodeKey != nil}
+  public var hasNodeKey: Bool {return _storage._nodeKey != nil}
   /// Clears the value of `nodeKey`. Subsequent reads from it will return its default value.
-  public mutating func clearNodeKey() {self._nodeKey = nil}
+  public mutating func clearNodeKey() {_uniqueStorage()._nodeKey = nil}
 
   /// Signature using `node_key` over the Digestible encoding of `contents`.
   public var signature: External_Ed25519Signature {
-    get {return _signature ?? External_Ed25519Signature()}
-    set {_signature = newValue}
+    get {return _storage._signature ?? External_Ed25519Signature()}
+    set {_uniqueStorage()._signature = newValue}
   }
   /// Returns true if `signature` has been explicitly set.
-  public var hasSignature: Bool {return self._signature != nil}
+  public var hasSignature: Bool {return _storage._signature != nil}
   /// Clears the value of `signature`. Subsequent reads from it will return its default value.
-  public mutating func clearSignature() {self._signature = nil}
+  public mutating func clearSignature() {_uniqueStorage()._signature = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _contents: Blockchain_BlockMetadataContents? = nil
-  fileprivate var _nodeKey: External_Ed25519Public? = nil
-  fileprivate var _signature: External_Ed25519Signature? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// Version 1 of an archived block.
@@ -379,6 +410,7 @@ extension Blockchain_Block: @unchecked Sendable {}
 extension Blockchain_BlockContents: @unchecked Sendable {}
 extension Blockchain_BlockSignature: @unchecked Sendable {}
 extension Blockchain_BlockMetadataContents: @unchecked Sendable {}
+extension Blockchain_BlockMetadataContents.OneOf_AttestationEvidence: @unchecked Sendable {}
 extension Blockchain_BlockMetadata: @unchecked Sendable {}
 extension Blockchain_ArchiveBlockV1: @unchecked Sendable {}
 extension Blockchain_ArchiveBlock: @unchecked Sendable {}
@@ -630,6 +662,7 @@ extension Blockchain_BlockMetadataContents: SwiftProtobuf.Message, SwiftProtobuf
     1: .standard(proto: "block_id"),
     2: .standard(proto: "quorum_set"),
     3: .standard(proto: "verification_report"),
+    5: .standard(proto: "dcap_evidence"),
     4: .standard(proto: "responder_id"),
   ]
 
@@ -641,8 +674,33 @@ extension Blockchain_BlockMetadataContents: SwiftProtobuf.Message, SwiftProtobuf
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._blockID) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._quorumSet) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._verificationReport) }()
+      case 3: try {
+        var v: External_VerificationReport?
+        var hadOneofValue = false
+        if let current = self.attestationEvidence {
+          hadOneofValue = true
+          if case .verificationReport(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.attestationEvidence = .verificationReport(v)
+        }
+      }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.responderID) }()
+      case 5: try {
+        var v: External_DcapEvidence?
+        var hadOneofValue = false
+        if let current = self.attestationEvidence {
+          hadOneofValue = true
+          if case .dcapEvidence(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.attestationEvidence = .dcapEvidence(v)
+        }
+      }()
       default: break
       }
     }
@@ -659,19 +717,22 @@ extension Blockchain_BlockMetadataContents: SwiftProtobuf.Message, SwiftProtobuf
     try { if let v = self._quorumSet {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
-    try { if let v = self._verificationReport {
+    try { if case .verificationReport(let v)? = self.attestationEvidence {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
     if !self.responderID.isEmpty {
       try visitor.visitSingularStringField(value: self.responderID, fieldNumber: 4)
     }
+    try { if case .dcapEvidence(let v)? = self.attestationEvidence {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Blockchain_BlockMetadataContents, rhs: Blockchain_BlockMetadataContents) -> Bool {
     if lhs._blockID != rhs._blockID {return false}
     if lhs._quorumSet != rhs._quorumSet {return false}
-    if lhs._verificationReport != rhs._verificationReport {return false}
+    if lhs.attestationEvidence != rhs.attestationEvidence {return false}
     if lhs.responderID != rhs.responderID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -686,41 +747,77 @@ extension Blockchain_BlockMetadata: SwiftProtobuf.Message, SwiftProtobuf._Messag
     3: .same(proto: "signature"),
   ]
 
+  fileprivate class _StorageClass {
+    var _contents: Blockchain_BlockMetadataContents? = nil
+    var _nodeKey: External_Ed25519Public? = nil
+    var _signature: External_Ed25519Signature? = nil
+
+    static let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _contents = source._contents
+      _nodeKey = source._nodeKey
+      _signature = source._signature
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._contents) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._nodeKey) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._signature) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._contents) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._nodeKey) }()
+        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._signature) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._contents {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try { if let v = self._nodeKey {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
-    try { if let v = self._signature {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._contents {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      try { if let v = _storage._nodeKey {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+      try { if let v = _storage._signature {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      } }()
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Blockchain_BlockMetadata, rhs: Blockchain_BlockMetadata) -> Bool {
-    if lhs._contents != rhs._contents {return false}
-    if lhs._nodeKey != rhs._nodeKey {return false}
-    if lhs._signature != rhs._signature {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._contents != rhs_storage._contents {return false}
+        if _storage._nodeKey != rhs_storage._nodeKey {return false}
+        if _storage._signature != rhs_storage._signature {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

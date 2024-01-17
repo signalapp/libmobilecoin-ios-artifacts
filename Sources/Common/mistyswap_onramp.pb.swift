@@ -87,7 +87,7 @@ public enum MistyswapOnramp_OnrampResultCode: SwiftProtobuf.Enum {
 
 extension MistyswapOnramp_OnrampResultCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [MistyswapOnramp_OnrampResultCode] = [
+  public static let allCases: [MistyswapOnramp_OnrampResultCode] = [
     .orcInvalid,
     .orcOk,
     .orcTooManyOnramps,
@@ -155,7 +155,7 @@ public enum MistyswapOnramp_OnrampState: SwiftProtobuf.Enum {
 
 extension MistyswapOnramp_OnrampState: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [MistyswapOnramp_OnrampState] = [
+  public static let allCases: [MistyswapOnramp_OnrampState] = [
     .osInvalid,
     .osNotStarted,
     .osPolling,

@@ -60,7 +60,7 @@ public enum External_KnownTokenId: SwiftProtobuf.Enum {
 
 extension External_KnownTokenId: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static var allCases: [External_KnownTokenId] = [
+  public static let allCases: [External_KnownTokenId] = [
     .mob,
   ]
 }
@@ -982,6 +982,168 @@ public struct External_VerificationReport {
   fileprivate var _sig: External_VerificationSignature? = nil
 }
 
+//// SGX quote version 3 as specified in
+//// <https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf#%5B%7B%22num%22%3A73%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C52%2C375%2C0%5D>.
+/// This is type is used in block chain types and should not have fields removed.
+/// New fields can be added, but will be assumed optional by consumers
+public struct External_Quote3 {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  //// The raw bytestream of the quote. This will contain only the
+  //// bytes specified in <https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf#%5B%7B%22num%22%3A73%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C52%2C375%2C0%5D>
+  public var data: Data = Data()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+//// A representation of
+//// [`sgx_ql_qve_collateral_t`](https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf#%5B%7B%22num%22%3A70%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C52%2C230%2C0%5D)
+//// All certificate and CRL values are DER encoded.
+//// All fields should be present
+/// This is type is used in block chain types and should not have fields removed.
+/// New fields can be added, but will be assumed optional by consumers
+public struct External_Collateral {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  //// The Provisioning Certification Key (PCK) certificate revocation list
+  //// (CRL) issuer chain. This is a sequence of DER formatted certificates.
+  ////
+  //// This chain is used to verify the `pck_crl`. The consumers should
+  //// have the root CA, which signed this issuer chain.
+  public var pckCrlIssuerChain: [Data] = []
+
+  //// The root certificate authority (CA) certificate revocation list
+  //// (CRL) in DER format.
+  ////
+  //// This will be the "Intel® SGX Root CA CRL" described in
+  //// <https://api.trustedservices.intel.com/documents/Intel_SGX_PCK_Certificate_CRL_Spec-1.5.pdf>.
+  ////
+  //// It can manually be retrieved from
+  //// <https://certificates.trustedservices.intel.com/IntelSGXRootCA.der>
+  public var rootCaCrl: Data = Data()
+
+  //// The the Provisioning Certification Key (PCK) certificate revocation
+  //// list (CRL) in DER format.
+  ////
+  //// This will be the "Intel® SGX PCK Processor CA CRL" described in
+  //// <https://api.trustedservices.intel.com/documents/Intel_SGX_PCK_Certificate_CRL_Spec-1.5.pdf>.
+  public var pckCrl: Data = Data()
+
+  //// The Trusted Computing Base (TCB) info issuer chain.
+  //// This is a sequence of DER formatted certificates.
+  ////
+  //// This is the x509 certificate chain that can verify the signature on
+  //// the `tcb_info`. Consumers should have the root CA which signed this
+  //// issuer chain.
+  public var tcbInfoIssuerChain: [Data] = []
+
+  //// The Trusted Computing Base (TCB) info.
+  ////
+  //// JSON formatted TCB info described at
+  //// <https://api.portal.trustedservices.intel.com/documentation#pcs-tcb-info-v4>
+  public var tcbInfo: String = String()
+
+  //// The Quoting Enclave (QE) identity issuer chain.
+  ////
+  //// This is the x509 certificate chain that can verify the signature on
+  //// the `qe_identity`. Consumers should have the root CA which signed
+  //// this issuer chain.
+  public var qeIdentityIssuerChain: [Data] = []
+
+  //// The Quoting Enclave (QE) identity.
+  ////
+  //// JSON formatted QE identity info described at
+  //// <https://api.portal.trustedservices.intel.com/documentation#pcs-enclave-identity-v4>
+  public var qeIdentity: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+//// Structure for holding the contents of the Enclave's Report Data.
+//// The Enclave Quote's ReportData member contains a SHA256 hash of this
+//// structure's contents.
+//// The hash is generated via the raw bytes from the nonce || key || custom_identity.
+//// If `custom_identity` is not present it is omitted from the hash.
+/// This is type is used in block chain types and should not have fields removed.
+/// New fields can be added, but will be assumed optional by consumers
+public struct External_EnclaveReportDataContents {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  //// The nonce used for generating the quote.
+  //// Must be exactly 16 bytes long (see mc-sgx-core-types::QuoteNonce).
+  public var nonce: Data = Data()
+
+  //// The public key of the enclave, it's an x25519 key.
+  //// Must be exactly 32 bytes long.
+  public var key: Data = Data()
+
+  //// An optional custom identity of the enclave.
+  //// Must be exactly 32 bytes long.
+  public var customIdentity: Data = Data()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+//// Attestation evidence for DCAP
+/// This is type is used in block chain types and should not have fields removed.
+/// New fields can be added, but will be assumed optional by consumers
+public struct External_DcapEvidence {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  //// The quote that was generated by the enclave and signed by the QE(Quoting Enclave).
+  public var quote: External_Quote3 {
+    get {return _quote ?? External_Quote3()}
+    set {_quote = newValue}
+  }
+  /// Returns true if `quote` has been explicitly set.
+  public var hasQuote: Bool {return self._quote != nil}
+  /// Clears the value of `quote`. Subsequent reads from it will return its default value.
+  public mutating func clearQuote() {self._quote = nil}
+
+  //// The collateral that was used to generate the quote.
+  public var collateral: External_Collateral {
+    get {return _collateral ?? External_Collateral()}
+    set {_collateral = newValue}
+  }
+  /// Returns true if `collateral` has been explicitly set.
+  public var hasCollateral: Bool {return self._collateral != nil}
+  /// Clears the value of `collateral`. Subsequent reads from it will return its default value.
+  public mutating func clearCollateral() {self._collateral = nil}
+
+  //// The report data for the quote. The SHA256 hash of the contents of
+  //// this is included in the quote's ReportData member.
+  public var reportData: External_EnclaveReportDataContents {
+    get {return _reportData ?? External_EnclaveReportDataContents()}
+    set {_reportData = newValue}
+  }
+  /// Returns true if `reportData` has been explicitly set.
+  public var hasReportData: Bool {return self._reportData != nil}
+  /// Clears the value of `reportData`. Subsequent reads from it will return its default value.
+  public mutating func clearReportData() {self._reportData = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _quote: External_Quote3? = nil
+  fileprivate var _collateral: External_Collateral? = nil
+  fileprivate var _reportData: External_EnclaveReportDataContents? = nil
+}
+
 //// The contents of a mint-tx, which is a transaction to mint new tokens.
 public struct External_MintTxPrefix {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -1759,6 +1921,10 @@ extension External_Receipt: @unchecked Sendable {}
 extension External_Receipt.OneOf_MaskedAmount: @unchecked Sendable {}
 extension External_VerificationSignature: @unchecked Sendable {}
 extension External_VerificationReport: @unchecked Sendable {}
+extension External_Quote3: @unchecked Sendable {}
+extension External_Collateral: @unchecked Sendable {}
+extension External_EnclaveReportDataContents: @unchecked Sendable {}
+extension External_DcapEvidence: @unchecked Sendable {}
 extension External_MintTxPrefix: @unchecked Sendable {}
 extension External_MintTx: @unchecked Sendable {}
 extension External_MintConfig: @unchecked Sendable {}
@@ -3213,6 +3379,198 @@ extension External_VerificationReport: SwiftProtobuf.Message, SwiftProtobuf._Mes
     if lhs._sig != rhs._sig {return false}
     if lhs.chain != rhs.chain {return false}
     if lhs.httpBody != rhs.httpBody {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension External_Quote3: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Quote3"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "data"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.data) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.data.isEmpty {
+      try visitor.visitSingularBytesField(value: self.data, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_Quote3, rhs: External_Quote3) -> Bool {
+    if lhs.data != rhs.data {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension External_Collateral: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Collateral"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "pck_crl_issuer_chain"),
+    2: .standard(proto: "root_ca_crl"),
+    3: .standard(proto: "pck_crl"),
+    4: .standard(proto: "tcb_info_issuer_chain"),
+    5: .standard(proto: "tcb_info"),
+    6: .standard(proto: "qe_identity_issuer_chain"),
+    7: .standard(proto: "qe_identity"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedBytesField(value: &self.pckCrlIssuerChain) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.rootCaCrl) }()
+      case 3: try { try decoder.decodeSingularBytesField(value: &self.pckCrl) }()
+      case 4: try { try decoder.decodeRepeatedBytesField(value: &self.tcbInfoIssuerChain) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.tcbInfo) }()
+      case 6: try { try decoder.decodeRepeatedBytesField(value: &self.qeIdentityIssuerChain) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.qeIdentity) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.pckCrlIssuerChain.isEmpty {
+      try visitor.visitRepeatedBytesField(value: self.pckCrlIssuerChain, fieldNumber: 1)
+    }
+    if !self.rootCaCrl.isEmpty {
+      try visitor.visitSingularBytesField(value: self.rootCaCrl, fieldNumber: 2)
+    }
+    if !self.pckCrl.isEmpty {
+      try visitor.visitSingularBytesField(value: self.pckCrl, fieldNumber: 3)
+    }
+    if !self.tcbInfoIssuerChain.isEmpty {
+      try visitor.visitRepeatedBytesField(value: self.tcbInfoIssuerChain, fieldNumber: 4)
+    }
+    if !self.tcbInfo.isEmpty {
+      try visitor.visitSingularStringField(value: self.tcbInfo, fieldNumber: 5)
+    }
+    if !self.qeIdentityIssuerChain.isEmpty {
+      try visitor.visitRepeatedBytesField(value: self.qeIdentityIssuerChain, fieldNumber: 6)
+    }
+    if !self.qeIdentity.isEmpty {
+      try visitor.visitSingularStringField(value: self.qeIdentity, fieldNumber: 7)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_Collateral, rhs: External_Collateral) -> Bool {
+    if lhs.pckCrlIssuerChain != rhs.pckCrlIssuerChain {return false}
+    if lhs.rootCaCrl != rhs.rootCaCrl {return false}
+    if lhs.pckCrl != rhs.pckCrl {return false}
+    if lhs.tcbInfoIssuerChain != rhs.tcbInfoIssuerChain {return false}
+    if lhs.tcbInfo != rhs.tcbInfo {return false}
+    if lhs.qeIdentityIssuerChain != rhs.qeIdentityIssuerChain {return false}
+    if lhs.qeIdentity != rhs.qeIdentity {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension External_EnclaveReportDataContents: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EnclaveReportDataContents"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "nonce"),
+    2: .same(proto: "key"),
+    3: .standard(proto: "custom_identity"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.nonce) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.key) }()
+      case 3: try { try decoder.decodeSingularBytesField(value: &self.customIdentity) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.nonce.isEmpty {
+      try visitor.visitSingularBytesField(value: self.nonce, fieldNumber: 1)
+    }
+    if !self.key.isEmpty {
+      try visitor.visitSingularBytesField(value: self.key, fieldNumber: 2)
+    }
+    if !self.customIdentity.isEmpty {
+      try visitor.visitSingularBytesField(value: self.customIdentity, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_EnclaveReportDataContents, rhs: External_EnclaveReportDataContents) -> Bool {
+    if lhs.nonce != rhs.nonce {return false}
+    if lhs.key != rhs.key {return false}
+    if lhs.customIdentity != rhs.customIdentity {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension External_DcapEvidence: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DcapEvidence"
+  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "quote"),
+    2: .same(proto: "collateral"),
+    3: .standard(proto: "report_data"),
+  ]
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._quote) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._collateral) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._reportData) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._quote {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._collateral {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._reportData {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: External_DcapEvidence, rhs: External_DcapEvidence) -> Bool {
+    if lhs._quote != rhs._quote {return false}
+    if lhs._collateral != rhs._collateral {return false}
+    if lhs._reportData != rhs._reportData {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
