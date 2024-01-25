@@ -3,4 +3,4 @@
 	url = https://github.com/mobilecoinfoundation/mobilecoin.git
 [submodule "Artifacts"]
 	path = Artifacts
-	url = https://github.com/mobilecoinofficial/libmobilecoin-apple-artifacts.git
+	url = https://github.com/signalapp/libmobilecoin-apple-artifacts.git
